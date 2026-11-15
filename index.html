@@ -87,12 +87,12 @@ body.hrapp header{display:none}body.hrapp main{max-width:none;padding:0}
 .kp{display:flex;gap:12px;align-items:center}.ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:22px}
 .two{display:grid;grid-template-columns:2fr 1fr;gap:14px}.qa button{width:100%;margin-bottom:10px;background:#eef3fb;color:var(--navy2);text-align:left}
 @media(max-width:860px){.lay{grid-template-columns:1fr}#sb{position:fixed;z-index:30;left:0;top:0;width:262px;transform:translateX(-105%);transition:.25s}.lay.open #sb{transform:none}.lay.open .scrim{display:block;position:fixed;inset:0;background:#0007;z-index:20}.bg{display:block}.uc div:last-child{display:none}.pad{padding:14px}.two{grid-template-columns:1fr}}
-.tag.warn{background:#fdeee0;color:#b9640c}.tag.bad{background:#fde6e6;color:var(--bad)}td button{padding:6px 10px;font-size:13px}</style>
+.tag.warn{background:#fdeee0;color:#b9640c}.tag.bad{background:#fde6e6;color:var(--bad)}td button{padding:6px 10px;font-size:13px}.link{color:var(--navy2);text-align:center;cursor:pointer;text-decoration:underline;margin:14px 0 0}td select{padding:6px;font-size:13px;margin:0}</style>
 </head>
 <body class="auth">
 <div id="intro"><button class="skip" id="skip">Passer</button><div class="light"></div><div class="door l"></div><div class="door r"></div>
 <div class="stage"><h2 class="word" id="word"></h2><div class="line"></div><div class="sub">HR Manager Pro · La gestion RH, simplifiée</div><button class="enter" id="enter">ENTRER</button></div></div>
-<header><b>HR Manager <span>Pro</span></b><div id="who"></div><button id="out" hidden>Déconnexion</button></header>
+<header><b>HR Manager <span>Pro</span></b><div id="who"></div><button id="pwb" hidden>Mot de passe</button><button id="out" hidden>Déconnexion</button></header>
 <main id="app"></main>
 <div id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -105,7 +105,7 @@ const SUB = {trial:'Essai',active:'Actif',expired:'Expiré',suspended:'Suspendu'
 const ST = {active:'Actif',on_leave:'En congé',terminated:'Parti'};
 const AT = {present:'Présent',late:'Retard',absent:'Absent',half_day:'Demi-journée',leave:'Congé'};
 const hhmm = t => t ? new Date(t).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '—';
-let me = null, mode = 'login', tab = 'dash';
+let me = null, mode = 'login', tab = 'dash', inRecovery = false;
 
 const setApp = h => $('#app').innerHTML = h;
 function toast(m, bad){ const t = $('#toast'); t.textContent = m; t.className = bad ? 'bad show' : 'show'; setTimeout(() => t.className = '', 5000); }
@@ -123,16 +123,18 @@ function noIntro(){ $('#intro').remove(); }
 
 async function init(){
   const { data:{ session } } = await sb.auth.getSession();
+  if (inRecovery || /type=recovery/.test(location.hash)) { inRecovery = true; noIntro(); return recoveryView(); }
   let seen = false; try{ seen = !!sessionStorage.introSeen }catch(e){}
   session || seen ? noIntro() : intro();
   session ? loadMe() : authView();
 }
-sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') { me = null; authView(); } });
+sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') { me = null; authView(); } if (ev === 'PASSWORD_RECOVERY') { inRecovery = true; recoveryView(); } });
 $('#out').onclick = () => sb.auth.signOut();
+$('#pwb').onclick = () => { setApp('<div><button class="alt" id="bkp" style="margin-bottom:12px">← Retour</button><div id="v"></div></div>'); pwForm($('#v')); $('#bkp').onclick = () => loadMe(); };
 
 /* ---------- connexion / inscription ---------- */
 function authView(){
-  document.body.className = 'auth'; $('#out').hidden = true; $('#who').textContent = '';
+  document.body.className = 'auth'; $('#out').hidden = true; $('#pwb').hidden = true; $('#who').textContent = '';
   const su = mode === 'signup', jn = mode === 'join';
   const tabs = [['login','Connexion'],['signup','Créer une entreprise'],['join','Rejoindre']];
   setApp(`<div class="authwrap"><aside class="brand"><div class="logo">HR</div><h1>HR Manager <span>Pro</span></h1>
@@ -148,8 +150,9 @@ function authView(){
   <label>Votre nom complet<input name="name" required></label>` : ''}
   <label>E-mail<input name="email" type="email" required autocomplete="email"></label>
   <label>Mot de passe<input name="pw" type="password" required minlength="8" autocomplete="${mode==='login' ? 'current-password' : 'new-password'}"></label>
-  <button style="width:100%;margin-top:8px">${su ? 'Créer mon entreprise' : jn ? 'Rejoindre mon entreprise' : 'Se connecter'}</button></form></section></div>`);
+  <button style="width:100%;margin-top:8px">${su ? 'Créer mon entreprise' : jn ? 'Rejoindre mon entreprise' : 'Se connecter'}</button>${mode === 'login' ? '<p class="link" id="fg">Mot de passe oublié ?</p>' : ''}</form></section></div>`);
   document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { mode = b.dataset.m; authView(); });
+  if ($('#fg')) $('#fg').onclick = async () => { const em = prompt('Votre adresse e-mail :'); if (!em) return; const { error } = await sb.auth.resetPasswordForEmail(em.trim(), { redirectTo: location.href.split('#')[0] }); error ? fail(error) : toast('Si ce compte existe, un e-mail de réinitialisation vient d’être envoyé.'); };
   $('#f').onsubmit = async e => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target)), b = e.target.querySelector('button[style]'); b.disabled = true;
@@ -181,12 +184,12 @@ async function loadMe(){
   if (!data) { const r = await sb.rpc('claim_employee_profile'); if (r.error) msg = r.error.message; else ({ data } = await getP()); }
   $('#out').hidden = false;
   if (!data) { document.body.className = 'auth'; return setApp(`<div class="authwrap" style="grid-template-columns:1fr"><section class="formside"><div class="card formcard"><h3>Compte non rattaché</h3><p>${esc(msg) || 'Ce compte n’est rattaché à aucune entreprise.'}</p><button onclick="sb.auth.signOut()">Se déconnecter</button></div></section></div>`); }
-  me = data; document.body.className = ''; $('#who').textContent = me.full_name || me.email; tab = 'dash';
+  me = data; document.body.className = ''; $('#who').textContent = me.full_name || me.email; tab = 'dash'; $('#pwb').hidden = hr();
   me.role === 'super_admin' ? adminView() : hr() ? shell() : staffShell();
 }
 
 /* ---------- entreprise (RH / admin) ---------- */
-const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘'],['leave','Congés','🌴'],['pay','Paie','💳'],['rec','Recrutement','📋',1],['perf','Performance','📈',1],['rep','Rapports','📊',1],['set','Paramètres','⚙️',1],['me','Mon espace','👤']];
+const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘'],['leave','Congés','🌴'],['pay','Paie','💳'],['rec','Recrutement','📋'],['perf','Performance','📈',1],['rep','Rapports','📊',1],['set','Paramètres','⚙️',1],['me','Mon espace','👤'],['pw','Mot de passe','🔒']];
 function shell(){
   document.body.className = 'hrapp';
   const ini = (me.full_name || me.email || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
@@ -209,7 +212,7 @@ function shell(){
 function show(){
   document.querySelectorAll('.sbn button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
   $('#ttl').textContent = NAV.find(n => n[0] === tab)[1];
-  ({ dash, emp, att, leave, pay, me: () => myArea($('#v')) })[tab]();
+  ({ dash, emp, att, leave, pay, rec, me: () => myArea($('#v')), pw: () => pwForm($('#v')) })[tab]();
 }
 function staffShell(){ setApp('<div id="v"></div>'); myArea($('#v')); }
 function chart(w){
@@ -404,6 +407,60 @@ function slip(s, run, company){
   <h3>Charges patronales <small>(information)</small></h3><table>${p.map(x => row(x.name, x.amount)).join('') || row('Aucune', 0)}</table>
   <p><small>Document généré par HR Manager Pro. Calcul basé sur les règles de paie en vigueur dans l’application.</small></p>`);
   w.document.close(); w.focus(); setTimeout(() => w.print(), 400);
+}
+/* ---------- recrutement ---------- */
+const JS = {draft:'Brouillon',open:'Ouverte',closed:'Clôturée'}, CS = {new:'Nouveau',screening:'Présélection',interview:'Entretien',offer:'Offre',hired:'Embauché',rejected:'Refusé'}, MD = {onsite:'Sur place',video:'Visio',phone:'Téléphone'};
+const dt = t => new Date(t).toLocaleString('fr-FR', {dateStyle:'short', timeStyle:'short'});
+async function rec(){
+  const el = $('#v'), t = rec.t || 'jobs';
+  const [{ data:jobs, error }, { data:cs }, { data:iv }] = await Promise.all([sb.from('job_posts').select('*').order('created_at', {ascending:false}), sb.from('candidates').select('*').order('created_at', {ascending:false}), sb.from('interviews').select('*').order('scheduled_at', {ascending:false})]);
+  if (error) return fail(error);
+  const jn = Object.fromEntries(jobs.map(j => [j.id, j.title])), cn = Object.fromEntries(cs.map(c => [c.id, c.first_name + ' ' + c.last_name])), hired = cs.filter(c => c.status === 'hired');
+  const o = (arr, sel) => arr.map(([v,l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${esc(l)}</option>`).join('');
+  const cand = list => `<div class="card wrap"><table><tr><th>Candidat</th><th>Offre</th><th>Contact</th><th>Statut</th><th>Note</th><th></th></tr>${list.map(c => `<tr><td>${esc(c.first_name)} ${esc(c.last_name)}</td><td>${esc(jn[c.job_id])}</td><td>${esc(c.email)}<br><small>${esc(c.phone)}</small></td>
+    <td>${c.status === 'hired' ? '<span class="tag ok">Embauché</span>' : `<select data-st="${c.id}">${o(Object.entries(CS).filter(([k]) => k !== 'hired'), c.status)}</select>`}</td>
+    <td>${c.status === 'hired' ? '' : `<select data-rt="${c.id}"><option value="">—</option>${o([1,2,3,4,5].map(n => [n, '★'.repeat(n)]), c.rating)}</select>`}</td>
+    <td>${['hired','rejected'].includes(c.status) ? '' : `<button data-h="${c.id}">Embaucher</button>`}</td></tr>`).join('') || '<tr><td colspan="6">Aucun candidat.</td></tr>'}</table></div>`;
+  const body = { jobs: () => `<form class="card" id="jf"><h3>Publier une offre</h3><div class="row"><label>Intitulé<input name="ti" required minlength="3"></label><label>Lieu<input name="lo"></label>
+    <label>Contrat<select name="ct">${o(Object.entries(CT), 'cdi')}</select></label><label>Date de clôture<input name="cl" type="date"></label>
+    <label>Statut<select name="st"><option value="open">Ouverte</option><option value="draft">Brouillon</option></select></label><label>Visible sans compte<select name="pb"><option value="true">Oui</option><option value="false">Non</option></select></label></div>
+    <label>Description<input name="de"></label><label>Profil recherché<input name="rq"></label><button>Publier</button></form>
+    ${jobs.map(j => `<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:180px"><b>${esc(j.title)}</b><br><small style="color:var(--mut)">${esc(j.location) || '—'} · ${CT[j.contract_type]}${j.is_public ? ' · publique' : ''}</small></div>
+    <b>${cs.filter(c => c.job_id === j.id).length} candidature(s)</b><span class="tag ${j.status === 'open' ? 'ok' : ''}">${JS[j.status]}</span>
+    <button class="alt" data-js="${j.id}" data-to="${j.status === 'open' ? 'closed' : 'open'}">${j.status === 'open' ? 'Clôturer' : 'Publier'}</button></div>`).join('') || '<p>Aucune offre pour le moment.</p>'}`,
+  cands: () => `<form class="card" id="cf"><h3>Ajouter un candidat</h3><div class="row"><label>Offre<select name="jb" required>${o(jobs.map(j => [j.id, j.title]))}</select></label><label>Prénom<input name="fn" required></label><label>Nom<input name="ln" required></label>
+    <label>E-mail<input name="em" type="email" required></label><label>Téléphone<input name="ph"></label><button>Ajouter</button></div></form>${cand(cs)}`,
+  ints: () => `<form class="card" id="if"><h3>Planifier un entretien</h3><div class="row"><label>Candidat<select name="cd" required>${o(cs.filter(c => !['hired','rejected'].includes(c.status)).map(c => [c.id, cn[c.id]]))}</select></label>
+    <label>Date et heure<input name="dt" type="datetime-local" required></label><label>Durée (min)<input name="du" type="number" min="10" value="45"></label><label>Mode<select name="md">${o(Object.entries(MD))}</select></label><label>Lieu ou lien<input name="lc"></label><button>Planifier</button></div></form>
+    <div class="card wrap"><table><tr><th>Date</th><th>Candidat</th><th>Mode</th><th>Statut</th><th>Note</th><th></th></tr>${iv.map(i => `<tr><td>${dt(i.scheduled_at)}</td><td>${esc(cn[i.candidate_id])}</td><td>${MD[i.mode]}</td><td><span class="tag ${i.status === 'done' ? 'ok' : i.status === 'cancelled' ? 'bad' : ''}">${{scheduled:'Prévu',done:'Terminé',cancelled:'Annulé'}[i.status]}</span></td><td>${i.score ? '★'.repeat(i.score) : ''}</td>
+    <td>${i.status === 'scheduled' ? `<button data-d="${i.id}">Terminé</button> <button class="alt" data-c="${i.id}">Annuler</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="6">Aucun entretien.</td></tr>'}</table></div>`,
+  hired: () => cand(hired) }[t]();
+  el.innerHTML = `<nav>${[['jobs','Offres (' + jobs.length + ')'],['cands','Candidatures (' + cs.length + ')'],['ints','Entretiens (' + iv.length + ')'],['hired','Embauchés (' + hired.length + ')']].map(([k,l]) => `<button data-t2="${k}" class="${t === k ? 'on' : ''}">${l}</button>`).join('')}</nav>${body}`;
+  const ok = (r, m) => r.error ? fail(r.error) : (toast(m), rec());
+  el.querySelectorAll('[data-t2]').forEach(b => b.onclick = () => { rec.t = b.dataset.t2; rec(); });
+  el.querySelectorAll('[data-js]').forEach(b => b.onclick = async () => ok(await sb.from('job_posts').update({ status: b.dataset.to }).eq('id', b.dataset.js), 'Offre mise à jour'));
+  el.querySelectorAll('[data-st]').forEach(b => b.onchange = async () => ok(await sb.from('candidates').update({ status: b.value }).eq('id', b.dataset.st), 'Statut mis à jour'));
+  el.querySelectorAll('[data-rt]').forEach(b => b.onchange = async () => ok(await sb.from('candidates').update({ rating: b.value || null }).eq('id', b.dataset.rt), 'Note enregistrée'));
+  el.querySelectorAll('[data-h]').forEach(b => b.onclick = async () => { if (!confirm('Embaucher ce candidat ? Une fiche employé sera créée.')) return; ok(await sb.rpc('hire_candidate', { p_candidate: b.dataset.h }), 'Embauché : renseignez son salaire dans sa fiche'); });
+  el.querySelectorAll('[data-c]').forEach(b => b.onclick = async () => ok(await sb.from('interviews').update({ status: 'cancelled' }).eq('id', b.dataset.c), 'Entretien annulé'));
+  el.querySelectorAll('[data-d]').forEach(b => b.onclick = async () => { const n = prompt('Note de 1 à 5 (laisser vide si aucune) :'); if (n === null) return; const fb = prompt('Commentaire (facultatif) :') || null;
+    ok(await sb.from('interviews').update({ status: 'done', score: +n >= 1 && +n <= 5 ? +n : null, feedback: fb }).eq('id', b.dataset.d), 'Entretien terminé'); });
+  const F = (id, fn) => $(id) && ($(id).onsubmit = async ev => { ev.preventDefault(); fn(Object.fromEntries(new FormData(ev.target))); });
+  F('#jf', async f => ok(await sb.from('job_posts').insert({ company_id: me.company_id, title: f.ti, location: f.lo || null, contract_type: f.ct, closing_date: f.cl || null, status: f.st, is_public: f.pb === 'true', description: f.de || '', requirements: f.rq || null }), 'Offre enregistrée'));
+  F('#cf', async f => ok(await sb.from('candidates').insert({ company_id: me.company_id, job_id: f.jb, first_name: f.fn, last_name: f.ln, email: f.em.trim().toLowerCase(), phone: f.ph || null, source: 'manual' }), 'Candidat ajouté'));
+  F('#if', async f => ok(await sb.from('interviews').insert({ company_id: me.company_id, candidate_id: f.cd, scheduled_at: new Date(f.dt).toISOString(), duration_minutes: +f.du, mode: f.md, location: f.lc || null }), 'Entretien planifié'));
+}
+/* ---------- mot de passe ---------- */
+function pwForm(el){
+  el.innerHTML = '<form class="card" id="pw" style="max-width:420px"><h3>Changer mon mot de passe</h3><label>Nouveau mot de passe<input name="a" type="password" minlength="8" required autocomplete="new-password"></label><label>Confirmer<input name="b" type="password" minlength="8" required autocomplete="new-password"></label><button>Enregistrer</button></form>';
+  $('#pw').onsubmit = async e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)); if (f.a !== f.b) return toast('Les mots de passe ne correspondent pas', true);
+    const { error } = await sb.auth.updateUser({ password: f.a }); error ? fail(error) : (toast('Mot de passe modifié'), e.target.reset()); };
+}
+function recoveryView(){
+  document.body.className = 'auth'; $('#out').hidden = true; $('#pwb').hidden = true;
+  setApp('<div class="authwrap" style="grid-template-columns:1fr"><section class="formside"><div class="card formcard"><div id="rv"></div></div></section></div>'); pwForm($('#rv'));
+  $('#pw').onsubmit = async e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)); if (f.a !== f.b) return toast('Les mots de passe ne correspondent pas', true);
+    const { error } = await sb.auth.updateUser({ password: f.a }); if (error) return fail(error); toast('Mot de passe modifié'); inRecovery = false; history.replaceState(null, '', location.pathname); loadMe(); };
 }
 /* ---------- espace de l’employé : profil et pointage ---------- */
 async function myArea(el){
