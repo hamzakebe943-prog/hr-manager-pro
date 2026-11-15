@@ -5,39 +5,62 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HR Manager Pro</title>
 <style>
-:root{--navy:#0b2545;--navy2:#13315c;--bg:#f3f5f8;--card:#fff;--line:#dde3ec;--txt:#1b2733;--mut:#6b7a8d;--ok:#1f8a5b;--bad:#c0392b}
+:root{--navy:#0b2545;--navy2:#13315c;--sky:#8fb0e0;--bg:#eef2f7;--card:#fff;--line:#dde3ec;--txt:#1b2733;--mut:#6b7a8d;--ok:#1f8a5b;--bad:#c0392b}
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+/* ---- Intro WELCOME ---- */
+#intro{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 45%,#1d4e89 0%,#0b2545 55%,#050f1f 100%);animation:fade .9s 4.6s forwards}
+.door{position:absolute;top:0;bottom:0;width:50.5%;z-index:2;background:linear-gradient(160deg,#0f2d57,#06142a);animation:open 1.5s .9s cubic-bezier(.77,0,.18,1) forwards}
+.door.l{left:0;border-right:2px solid var(--sky);--x:-101%}.door.r{right:0;border-left:2px solid var(--sky);--x:101%}
+.door::after{content:"";position:absolute;inset:14% 14%;border:1px solid #8fb0e033;border-radius:6px}
+.core{position:relative;text-align:center;color:#fff;padding:0 12px}
+.core .logo{width:64px;height:64px;margin:0 auto 22px;border:2px solid var(--sky);border-radius:16px;display:grid;place-items:center;font-weight:700;font-size:22px;color:var(--sky);opacity:0;animation:up .8s 1.6s forwards}
+#w{margin:0;font-size:clamp(34px,11vw,76px);letter-spacing:.26em;font-weight:300;padding-left:.26em}
+#w span{display:inline-block;opacity:0;transform:translateY(16px);animation:up .7s forwards}
+.core p{margin:16px 0 0;opacity:0;letter-spacing:.32em;text-transform:uppercase;font-size:12px;color:#c9d6ea;animation:up .8s 3s forwards}
+.line{display:block;height:2px;width:0;background:var(--sky);margin:18px auto 0;animation:grow 1s 2.6s forwards}
+#skip{position:absolute;right:16px;bottom:18px;z-index:3;background:#ffffff1f;color:#fff;border:1px solid #ffffff33;border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer}
+@keyframes open{to{transform:translateX(var(--x))}}@keyframes fade{to{opacity:0;visibility:hidden}}
+@keyframes up{to{opacity:1;transform:none}}@keyframes grow{to{width:170px}}
+/* ---- Interface ---- */
 header{background:var(--navy);color:#fff;display:flex;align-items:center;gap:12px;padding:12px 16px;position:sticky;top:0;z-index:5}
-header b{font-size:18px;flex:1}header b span{color:#9db4d6;font-weight:500}
-#who{font-size:12px;color:#c5d3e8;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-button,.btn{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:10px 14px;font-size:15px;cursor:pointer}
-header button{background:#fff2;padding:7px 10px;font-size:13px}
+header .mk{width:30px;height:30px;border:1.5px solid var(--sky);border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--sky)}
+header b{font-size:17px;flex:1}header b span{color:var(--sky);font-weight:500}
+#who{font-size:12px;color:#c5d3e8;max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+button{background:var(--navy);color:#fff;border:0;border-radius:10px;padding:11px 15px;font-size:15px;cursor:pointer}
+header button{background:#ffffff22;padding:7px 10px;font-size:13px}
 button.alt{background:#e8edf5;color:var(--navy)}button.danger{background:var(--bad)}button:disabled{opacity:.5}
 main{max-width:980px;margin:0 auto;padding:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
-.auth{max-width:420px;margin:24px auto}.auth h2{margin-top:0;color:var(--navy)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 2px 10px #0b254510}
+.hero{background:linear-gradient(135deg,#0b2545,#1d4e89);color:#fff;margin:-16px -16px 0;padding:38px 22px 70px;text-align:center}
+.hero .bd{display:inline-block;border:1px solid #ffffff44;border-radius:20px;padding:4px 14px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#c9d6ea}
+.hero h1{font-size:clamp(24px,6vw,38px);margin:16px auto 10px;max-width:640px;line-height:1.2;font-weight:600}.hero p{margin:0 auto;max-width:520px;color:#c9d6ea;line-height:1.5}
+.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}.chips i{font-style:normal;font-size:12px;background:#ffffff1c;border-radius:20px;padding:5px 12px}
+.auth{max-width:430px;margin:-44px auto 24px;position:relative}.auth h2{margin:0 0 4px;color:var(--navy)}
+.tabs{display:flex;gap:6px;margin-bottom:12px;background:#e8edf5;border-radius:12px;padding:4px}.tabs button{flex:1;background:transparent;color:var(--mut);padding:9px 4px;font-size:13px}.tabs button.on{background:#fff;color:var(--navy);box-shadow:0 1px 4px #0b254520}
 label{display:block;font-size:13px;color:var(--mut);margin:10px 0}
-input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:16px;margin-top:4px;background:#fff}
-.link{color:var(--navy2);text-align:center;cursor:pointer;text-decoration:underline;margin:14px 0 0}
+input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:16px;margin-top:4px;background:#fff;font-family:inherit}
+.link{color:var(--navy2);text-align:center;cursor:pointer;text-decoration:underline;margin:14px 0 0;font-size:14px}
 nav{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto}nav button{background:#e8edf5;color:var(--navy);white-space:nowrap}nav button.on{background:var(--navy);color:#fff}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
-.kpi small{color:var(--mut);display:block;font-size:12px}.kpi b{font-size:24px;color:var(--navy)}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}.kpi small{color:var(--mut);display:block;font-size:12px}.kpi b{font-size:24px;color:var(--navy)}
 .wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--mut);font-weight:600;font-size:12px}
-.bars{display:flex;align-items:flex-end;gap:8px;height:110px;margin-top:8px}
-.bars div{flex:1;text-align:center;font-size:11px;color:var(--mut)}.bars i{display:block;background:var(--navy2);border-radius:4px 4px 0 0;min-height:2px}
+.bars{display:flex;align-items:flex-end;gap:8px;height:110px;margin-top:8px}.bars div{flex:1;text-align:center;font-size:11px;color:var(--mut)}.bars i{display:block;background:var(--navy2);border-radius:4px 4px 0 0;min-height:2px}
 .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end}
-.tag{background:#e8edf5;color:var(--navy);border-radius:20px;padding:2px 9px;font-size:12px}
-#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ok);color:#fff;padding:11px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:.2s;max-width:90%;z-index:9}
-#toast.show{opacity:1}#toast.bad{background:var(--bad)}h3{margin:0 0 8px;color:var(--navy)}
+.tag{background:#e8edf5;color:var(--navy);border-radius:20px;padding:2px 9px;font-size:12px}h3{margin:0 0 8px;color:var(--navy)}
+.inv{background:#eaf2ff;border-color:#b9d1f5}.inv b{font-size:26px;letter-spacing:.18em;color:var(--navy)}
+.me p{margin:6px 0}.me small{color:var(--mut)}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ok);color:#fff;padding:11px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:.2s;max-width:90%;z-index:99}
+#toast.show{opacity:1}#toast.bad{background:var(--bad)}
 </style>
 </head>
 <body>
-<header><b>HR Manager <span>Pro</span></b><div id="who"></div><button id="out" hidden>Déconnexion</button></header>
-<main id="app"><p>Chargement…</p></main>
-<div id="toast"></div>
+<div id="intro"><div class="door l"></div><div class="door r"></div>
+<div class="core"><div class="logo">HR</div><h1 id="w"></h1><span class="line"></span><p>HR Manager Pro</p></div>
+<button id="skip">Passer</button></div>
+<header><div class="mk">HR</div><b>HR Manager <span>Pro</span></b><div id="who"></div><button id="out" hidden>Déconnexion</button></header>
+<main id="app"></main><div id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 const sb = supabase.createClient('https://egxoglirjqnzkullsrez.supabase.co','sb_publishable_XnzmsUCYgpPclGJlQMYPJg_XjYFlEYh');
@@ -46,69 +69,98 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const fmt = n => new Intl.NumberFormat('fr-FR').format(n ?? 0);
 const SUB = {trial:'Essai',active:'Actif',expired:'Expiré',suspended:'Suspendu',past_due:'Impayé',cancelled:'Annulé'};
 const ST = {active:'Actif',on_leave:'En congé',terminated:'Parti'};
-let me = null, mode = 'login', tab = 'dash';
+const LV = {pending:'En attente',approved:'Approuvé',rejected:'Refusé',cancelled:'Annulé'};
+let me = null, mode = 'login', tab = 'dash', rec = location.hash.includes('type=recovery');
+
+/* intro */
+$('#w').innerHTML = 'WELCOME'.split('').map((c, i) => `<span style="animation-delay:${1.9 + i * .12}s">${c}</span>`).join('');
+const endIntro = () => { $('#intro').style.display = 'none'; sessionStorage.seen = 1; };
+if (sessionStorage.seen) endIntro(); else { setTimeout(endIntro, 5500); $('#skip').onclick = endIntro; }
 
 const setApp = h => $('#app').innerHTML = h;
 function toast(m, bad){ const t = $('#toast'); t.textContent = m; t.className = bad ? 'bad show' : 'show'; setTimeout(() => t.className = '', 4500); }
 const fail = e => toast(e?.message || 'Une erreur est survenue', true);
 const hr = () => me && ['company_admin','hr'].includes(me.role);
+const today = () => new Date().toLocaleDateString('sv');
 
 async function init(){
+  if (rec) return recoverView();
   const { data:{ session } } = await sb.auth.getSession();
   session ? loadMe() : authView();
 }
-sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') { me = null; authView(); } });
+sb.auth.onAuthStateChange(ev => { if (ev === 'PASSWORD_RECOVERY') { rec = true; recoverView(); } if (ev === 'SIGNED_OUT') { me = null; authView(); } });
 $('#out').onclick = () => sb.auth.signOut();
 
+/* ---------- Accueil / connexion ---------- */
 function authView(){
   $('#out').hidden = true; $('#who').textContent = '';
-  const su = mode === 'signup';
-  setApp(`<form class="card auth" id="f"><h2>${su ? 'Créer mon entreprise' : 'Connexion'}</h2>
-  ${su ? `<label>Nom de l’entreprise<input name="company" required minlength="2"></label>
-  <label>Votre nom complet<input name="name" required></label>
+  const su = mode === 'signup', jn = mode === 'join';
+  const T = [['login','Connexion'],['signup','Créer une entreprise'],['join','Rejoindre avec un code']];
+  setApp(`<section class="hero"><span class="bd">Plateforme RH</span><h1>Toutes vos ressources humaines, au même endroit</h1>
+  <p>Employés, présences, congés, paie et recrutement : simple, sécurisé et pensé pour l’Afrique et le monde.</p>
+  <div class="chips"><i>Employés</i><i>Présences</i><i>Congés</i><i>Paie</i><i>Recrutement</i></div></section>
+  <form class="card auth" id="f"><div class="tabs">${T.map(([k,l]) => `<button type="button" data-m="${k}" class="${mode===k?'on':''}">${l}</button>`).join('')}</div>
+  ${su ? `<label>Nom de l’entreprise<input name="company" required minlength="2"></label><label>Votre nom complet<input name="name" required></label>
   <label>Pays<select name="country"><option value="SN">Sénégal</option><option value="CI">Côte d’Ivoire</option><option value="ML">Mali</option><option value="BF">Burkina Faso</option><option value="GN">Guinée</option><option value="CM">Cameroun</option><option value="MA">Maroc</option><option value="FR">France</option></select></label>
   <label>Langue<select name="lang"><option value="fr">Français</option><option value="en">English</option><option value="ar">العربية</option><option value="de">Deutsch</option></select></label>` : ''}
+  ${jn ? `<label>Code d’invitation (donné par votre employeur)<input name="code" required maxlength="8" style="text-transform:uppercase;letter-spacing:.2em"></label>` : ''}
   <label>E-mail<input name="email" type="email" required autocomplete="email"></label>
-  <label>Mot de passe<input name="pw" type="password" required minlength="8" autocomplete="${su ? 'new-password' : 'current-password'}"></label>
-  <button style="width:100%;margin-top:8px">${su ? 'Créer le compte' : 'Se connecter'}</button>
-  <p class="link" id="sw">${su ? 'J’ai déjà un compte' : 'Créer une entreprise'}</p></form>`);
-  $('#sw').onclick = () => { mode = su ? 'login' : 'signup'; authView(); };
+  <label>Mot de passe<input name="pw" type="password" required minlength="8" autocomplete="${mode==='login' ? 'current-password' : 'new-password'}"></label>
+  <button style="width:100%;margin-top:8px">${su ? 'Créer mon entreprise' : jn ? 'Rejoindre mon entreprise' : 'Se connecter'}</button>
+  ${mode === 'login' ? '<p class="link" id="fg">Mot de passe oublié ?</p>' : ''}</form>`);
+  document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { mode = b.dataset.m; authView(); });
+  if ($('#fg')) $('#fg').onclick = async () => {
+    const em = $('#f').email.value; if (!em) return toast('Saisissez d’abord votre e-mail', true);
+    const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: location.href.split('#')[0] });
+    error ? fail(error) : toast('Un e-mail de réinitialisation vous a été envoyé');
+  };
   $('#f').onsubmit = async e => {
     e.preventDefault();
-    const f = Object.fromEntries(new FormData(e.target)), b = e.target.querySelector('button'); b.disabled = true;
-    if (su) {
-      const { data, error } = await sb.auth.signUp({ email: f.email, password: f.pw, options: { emailRedirectTo: location.href.split('#')[0], data: { company_name: f.company, full_name: f.name, country: f.country, language: f.lang } } });
-      b.disabled = false;
-      if (error) return fail(error);
-      if (data.session) loadMe(); else setApp('<div class="card auth"><h2>Vérifiez votre e-mail</h2><p>Un lien de confirmation vient d’être envoyé à <b>' + esc(f.email) + '</b>. Ouvrez-le, puis connectez-vous.</p></div>');
-    } else {
+    const f = Object.fromEntries(new FormData(e.target)), b = e.target.querySelector('button:not([type])'); b.disabled = true;
+    if (mode === 'login') {
       const { error } = await sb.auth.signInWithPassword({ email: f.email, password: f.pw });
-      b.disabled = false;
-      if (error) return fail(error);
-      loadMe();
+      b.disabled = false; return error ? fail(error) : loadMe();
     }
+    if (jn) localStorage.pendingCode = f.code.trim().toUpperCase();
+    const data0 = su ? { company_name: f.company, full_name: f.name, country: f.country, language: f.lang } : {};
+    const { data, error } = await sb.auth.signUp({ email: f.email, password: f.pw, options: { emailRedirectTo: location.href.split('#')[0], data: data0 } });
+    b.disabled = false; if (error) return fail(error);
+    if (data.session) loadMe(); else setApp('<div class="card auth" style="margin-top:24px"><h2>Vérifiez votre e-mail</h2><p>Un lien de confirmation a été envoyé à <b>' + esc(f.email) + '</b>. Ouvrez-le, puis connectez-vous' + (jn ? ' : votre code sera utilisé automatiquement.' : '.') + '</p><button onclick="mode=\'login\';authView()" style="width:100%">Aller à la connexion</button></div>');
   };
+}
+function recoverView(){
+  $('#out').hidden = true;
+  setApp(`<form class="card auth" id="r" style="margin-top:40px"><h2>Nouveau mot de passe</h2><label>Mot de passe (8 caractères minimum)<input name="pw" type="password" minlength="8" required autocomplete="new-password"></label><button style="width:100%">Enregistrer</button></form>`);
+  $('#r').onsubmit = async e => { e.preventDefault(); const { error } = await sb.auth.updateUser({ password: e.target.pw.value }); if (error) return fail(error); rec = false; history.replaceState(null, '', location.pathname); toast('Mot de passe mis à jour'); loadMe(); };
 }
 
 async function loadMe(){
   const { data:{ user } } = await sb.auth.getUser();
   if (!user) return authView();
-  const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  let { data, error } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
   if (error) return fail(error);
-  if (!data) { setApp('<div class="card auth"><h2>Compte sans entreprise</h2><p>Ce compte n’est rattaché à aucune entreprise.</p></div>'); $('#out').hidden = false; return; }
-  me = data; $('#out').hidden = false; $('#who').textContent = (me.full_name || me.email);
-  tab = 'dash';
-  me.role === 'super_admin' ? adminView() : hr() ? shell() : staffView();
+  $('#out').hidden = false;
+  if (!data && localStorage.pendingCode) {
+    const { error: e2 } = await sb.rpc('claim_invitation', { p_code: localStorage.pendingCode });
+    delete localStorage.pendingCode; if (e2) toast(e2.message, true); else return loadMe();
+  }
+  if (!data) {
+    setApp('<form class="card auth" id="c" style="margin-top:30px"><h2>Rejoindre mon entreprise</h2><p style="color:var(--mut)">Saisissez le code d’invitation remis par votre employeur.</p><label>Code<input name="code" required maxlength="8" style="text-transform:uppercase;letter-spacing:.2em"></label><button style="width:100%">Valider</button></form>');
+    $('#c').onsubmit = async e => { e.preventDefault(); const { error } = await sb.rpc('claim_invitation', { p_code: e.target.code.value }); error ? fail(error) : loadMe(); };
+    return;
+  }
+  me = data; $('#who').textContent = me.full_name || me.email; tab = 'dash';
+  me.role === 'super_admin' ? adminView() : hr() ? shell() : (setApp('<div id="v"></div>'), space($('#v')));
 }
 
 /* ---------- Entreprise (RH / admin) ---------- */
 function shell(){
-  setApp(`<nav>${[['dash','Tableau de bord'],['emp','Employés'],['me','Mon pointage']].map(([k,l]) => `<button data-t="${k}" class="${tab===k?'on':''}">${l}</button>`).join('')}</nav><div id="v"></div>`);
+  setApp(`<nav>${[['dash','Tableau de bord'],['emp','Employés'],['me','Mon espace']].map(([k,l]) => `<button data-t="${k}" class="${tab===k?'on':''}">${l}</button>`).join('')}</nav><div id="v"></div>`);
   document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.t; shell(); });
-  ({ dash, emp, me: staffView })[tab]($('#v'));
+  ({ dash, emp, me: space })[tab]($('#v'));
 }
-async function dash(){
-  const el = $('#v'); el.innerHTML = '<p>Chargement…</p>';
+async function dash(el){
+  el.innerHTML = '<p>Chargement…</p>';
   const { data:d, error } = await sb.rpc('company_dashboard'); if (error) return fail(error);
   const k = [['total_employees','Employés'],['active_employees','Actifs'],['absent_today','Absents aujourd’hui'],['late_today','Retards'],['on_leave_today','En congé'],['pending_leaves','Congés en attente'],['monthly_payroll','Masse salariale (FCFA)'],['new_hires_30d','Embauches (30 j)'],['open_positions','Postes ouverts'],['new_candidates','Nouveaux candidats']];
   const w = d.attendance_7d || [], mx = Math.max(1, ...w.map(x => x.present + x.late));
@@ -116,30 +168,56 @@ async function dash(){
   <div class="card" style="margin-top:14px"><h3>Présences (7 derniers jours)</h3><div class="bars">${w.map(x => `<div><i style="height:${Math.round((x.present+x.late)/mx*90)}px"></i>${x.date.slice(8)}</div>`).join('')}</div></div>
   <div class="card"><h3>Effectifs par département</h3>${(d.headcount_by_department||[]).map(x => `<p style="margin:6px 0">${esc(x.department)} <span class="tag">${x.count}</span></p>`).join('') || '<p>Aucun employé.</p>'}</div>`;
 }
-async function emp(){
-  const el = $('#v'); el.innerHTML = '<p>Chargement…</p>';
-  const { data, error } = await sb.from('employees').select('id,employee_number,first_name,last_name,job_title,status,hire_date').order('last_name'); if (error) return fail(error);
-  el.innerHTML = `<form class="card" id="nf"><h3>Ajouter un employé</h3><div class="row">
+async function emp(el){
+  el.innerHTML = '<p>Chargement…</p>';
+  const { data, error } = await sb.from('employees').select('id,employee_number,first_name,last_name,job_title,status,hire_date,profile_id').order('last_name'); if (error) return fail(error);
+  el.innerHTML = `<div id="iv"></div><form class="card" id="nf"><h3>Ajouter un employé</h3><div class="row">
   <label>Prénom<input name="fn" required></label><label>Nom<input name="ln" required></label>
-  <label>Poste<input name="jt"></label><label>Date d’embauche<input name="hd" type="date" required value="${new Date().toISOString().slice(0,10)}"></label>
-  <button>Ajouter</button></div></form>
-  <div class="card wrap"><table><tr><th>N°</th><th>Nom</th><th>Poste</th><th>Statut</th><th>Embauche</th></tr>
-  ${data.map(e => `<tr><td>${esc(e.employee_number)}</td><td>${esc(e.first_name)} ${esc(e.last_name)}</td><td>${esc(e.job_title)}</td><td><span class="tag">${ST[e.status] || e.status}</span></td><td>${esc(e.hire_date)}</td></tr>`).join('') || '<tr><td colspan="5">Aucun employé pour le moment.</td></tr>'}</table></div>`;
+  <label>Poste<input name="jt"></label><label>Date d’embauche<input name="hd" type="date" required value="${today()}"></label><button>Ajouter</button></div></form>
+  <div class="card wrap"><table><tr><th>N°</th><th>Nom</th><th>Poste</th><th>Statut</th><th>Accès employé</th></tr>
+  ${data.map(e => `<tr><td>${esc(e.employee_number)}</td><td>${esc(e.first_name)} ${esc(e.last_name)}</td><td>${esc(e.job_title)}</td><td><span class="tag">${ST[e.status] || e.status}</span></td>
+  <td>${e.profile_id ? '<span class="tag">Compte actif</span>' : e.status === 'terminated' ? '' : `<button class="alt" data-inv="${e.id}" data-n="${esc(e.first_name)}">Inviter</button>`}</td></tr>`).join('') || '<tr><td colspan="5">Aucun employé pour le moment.</td></tr>'}</table></div>`;
   $('#nf').onsubmit = async ev => {
     ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
     const { error } = await sb.from('employees').insert({ company_id: me.company_id, first_name: f.fn, last_name: f.ln, job_title: f.jt || null, hire_date: f.hd });
-    if (error) return fail(error); toast('Employé ajouté'); emp();
+    error ? fail(error) : (toast('Employé ajouté'), emp(el));
   };
+  document.querySelectorAll('[data-inv]').forEach(b => b.onclick = async () => {
+    const { data:code, error } = await sb.rpc('generate_invite', { p_employee: b.dataset.inv }); if (error) return fail(error);
+    const msg = `Bonjour ${b.dataset.n}, rejoignez votre espace RH sur ${location.href.split('#')[0]} : onglet « Rejoindre avec un code », code ${code}`;
+    $('#iv').innerHTML = `<div class="card inv"><h3>Code d’invitation pour ${esc(b.dataset.n)}</h3><b>${esc(code)}</b><p style="color:var(--mut)">À transmettre à l’employé. Il crée son compte avec ce code et accède à son profil, son pointage et ses congés.</p><button id="sh">Partager</button></div>`;
+    $('#sh').onclick = () => navigator.share ? navigator.share({ text: msg }) : navigator.clipboard.writeText(msg).then(() => toast('Message copié'));
+    scrollTo({ top: 0, behavior: 'smooth' });
+  });
 }
 
-/* ---------- Employé : pointage ---------- */
-function staffView(el){
-  const box = el || document.getElementById('app'); if (!el) $('#app').innerHTML = '<div id="v"></div>';
-  const t = el || $('#v');
-  t.innerHTML = `<div class="card"><h3>Mon pointage</h3><p style="color:var(--mut)">L’heure enregistrée est celle du serveur.</p>
-  <div class="row"><button id="ci">Pointer mon arrivée</button><button id="co" class="alt">Pointer mon départ</button></div></div>`;
-  const go = (fn, ok) => async () => { const { error } = await sb.rpc(fn); error ? fail(error) : toast(ok); };
+/* ---------- Espace employé : profil, pointage, congés ---------- */
+async function space(el){
+  el.innerHTML = '<p>Chargement…</p>';
+  const { data:e } = await sb.from('employees').select('id,employee_number,first_name,last_name,job_title,hire_date,status,email,phone').eq('profile_id', me.id).maybeSingle();
+  if (!e) { el.innerHTML = '<div class="card"><h3>Mon espace</h3><p>Aucune fiche employé n’est liée à ce compte.</p></div>'; return; }
+  const [at, lt, lr] = await Promise.all([
+    sb.from('attendance').select('check_in,check_out,status').eq('employee_id', e.id).eq('work_date', today()).maybeSingle(),
+    sb.from('leave_types').select('id,name').order('name'),
+    sb.from('leave_requests').select('start_date,end_date,days,status,leave_type_id').eq('employee_id', e.id).order('start_date', { ascending: false }).limit(10)]);
+  const hm = t => t ? new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—';
+  const types = lt.data || [], tn = id => (types.find(t => t.id === id) || {}).name || '';
+  el.innerHTML = `<div class="card me"><h3>Mon profil</h3><p><b>${esc(e.first_name)} ${esc(e.last_name)}</b> <span class="tag">${ST[e.status] || ''}</span></p>
+  <p><small>Matricule</small> ${esc(e.employee_number)} &nbsp; <small>Poste</small> ${esc(e.job_title) || '—'} &nbsp; <small>Embauche</small> ${esc(e.hire_date)}</p></div>
+  <div class="card"><h3>Pointage du jour</h3><p>Arrivée : <b>${hm(at.data?.check_in)}</b> &nbsp; Départ : <b>${hm(at.data?.check_out)}</b> ${at.data?.status === 'late' ? '<span class="tag">Retard</span>' : ''}</p>
+  <div class="row"><button id="ci">Pointer mon arrivée</button><button id="co" class="alt">Pointer mon départ</button></div></div>
+  <form class="card" id="lf"><h3>Demander un congé</h3><div class="row"><label>Type<select name="t">${types.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select></label>
+  <label>Du<input name="s" type="date" required></label><label>Au<input name="e" type="date" required></label></div>
+  <label>Motif (facultatif)<input name="r"></label><button>Envoyer la demande</button></form>
+  <div class="card wrap"><h3>Mes demandes</h3><table><tr><th>Type</th><th>Du</th><th>Au</th><th>Jours</th><th>Statut</th></tr>
+  ${(lr.data || []).map(r => `<tr><td>${esc(tn(r.leave_type_id))}</td><td>${r.start_date}</td><td>${r.end_date}</td><td>${r.days}</td><td><span class="tag">${LV[r.status]}</span></td></tr>`).join('') || '<tr><td colspan="5">Aucune demande.</td></tr>'}</table></div>`;
+  const go = (fn, ok) => async () => { const { error } = await sb.rpc(fn); error ? fail(error) : (toast(ok), space(el)); };
   $('#ci').onclick = go('check_in', 'Arrivée enregistrée'); $('#co').onclick = go('check_out', 'Départ enregistré');
+  $('#lf').onsubmit = async ev => {
+    ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
+    const { error } = await sb.from('leave_requests').insert({ company_id: me.company_id, employee_id: e.id, leave_type_id: f.t, start_date: f.s, end_date: f.e, reason: f.r || null });
+    error ? fail(error) : (toast('Demande envoyée'), space(el));
+  };
 }
 
 /* ---------- Super admin (back-office) ---------- */
