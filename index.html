@@ -186,7 +186,7 @@ async function loadMe(){
 }
 
 /* ---------- entreprise (RH / admin) ---------- */
-const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘'],['leave','Congés','🌴'],['pay','Paie','💳',1],['rec','Recrutement','📋',1],['perf','Performance','📈',1],['rep','Rapports','📊',1],['set','Paramètres','⚙️',1],['me','Mon espace','👤']];
+const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘'],['leave','Congés','🌴'],['pay','Paie','💳'],['rec','Recrutement','📋',1],['perf','Performance','📈',1],['rep','Rapports','📊',1],['set','Paramètres','⚙️',1],['me','Mon espace','👤']];
 function shell(){
   document.body.className = 'hrapp';
   const ini = (me.full_name || me.email || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
@@ -209,7 +209,7 @@ function shell(){
 function show(){
   document.querySelectorAll('.sbn button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
   $('#ttl').textContent = NAV.find(n => n[0] === tab)[1];
-  ({ dash, emp, att, leave, me: () => myArea($('#v')) })[tab]();
+  ({ dash, emp, att, leave, pay, me: () => myArea($('#v')) })[tab]();
 }
 function staffShell(){ setApp('<div id="v"></div>'); myArea($('#v')); }
 function chart(w){
@@ -322,8 +322,8 @@ async function leaveBox(el, e){
 const CT = {cdi:'CDI',cdd:'CDD',stage:'Stage',interim:'Intérim',consultant:'Consultant',other:'Autre'}, DT = {contract:'Contrat',id:'Pièce d’identité',cv:'CV',diploma:'Diplôme',certificate:'Attestation',other:'Autre'};
 async function empView(id, t = 'info'){
   const el = $('#v'); el.innerHTML = '<p>Chargement…</p>';
-  const [{ data:e, error }, { data:deps }, nm, { data:docs }] = await Promise.all([sb.from('employees').select('*').eq('id', id).single(), sb.from('departments').select('id,name').order('name'), names(),
-    sb.from('employee_documents').select('id,doc_type,title,storage_path,created_at').eq('employee_id', id).order('created_at', {ascending:false})]);
+  const [{ data:e, error }, { data:deps }, nm, { data:docs }, { data:pp }] = await Promise.all([sb.from('employees').select('*').eq('id', id).single(), sb.from('departments').select('id,name').order('name'), names(),
+    sb.from('employee_documents').select('id,doc_type,title,storage_path,created_at').eq('employee_id', id).order('created_at', {ascending:false}), sb.from('employee_payroll_profiles').select('*').eq('employee_id', id).maybeSingle()]);
   if (error) return fail(error);
   const dn = Object.fromEntries((deps || []).map(d => [d.id, d.name])), ini = ((e.first_name || '')[0] || '') + ((e.last_name || '')[0] || '');
   const R = (l, v) => `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><small style="color:var(--mut)">${l}</small><div><b>${esc(v) || '—'}</b></div></div>`;
@@ -337,13 +337,17 @@ async function empView(id, t = 'info'){
       <label>Responsable<select name="mg">${opts(Object.entries(nm).filter(([k]) => k !== id), e.manager_id, '—')}</select></label>
       <label>Contrat<select name="ct">${opts(Object.entries(CT), e.contract_type)}</select></label></div>
       <p><button>Enregistrer</button> <button type="button" class="alt" id="nd">Nouveau département</button></p></form>`,
+    pay: () => `<form id="pf"><div class="row"><label>Salaire de base mensuel<input name="bs" type="number" min="0" step="1" value="${pp?.base_salary ?? ''}" required></label>
+      <label>Statut cadre<select name="ex"><option value="false">Non</option><option value="true" ${pp?.is_executive ? 'selected' : ''}>Oui</option></select></label>
+      <label>Parts fiscales<input name="tp" type="number" min="1" max="10" step="0.5" value="${pp?.tax_parts ?? 1}"></label>
+      <label>Mode de paiement<select name="pm">${opts([['bank','Virement'],['cash','Espèces'],['wave','Wave'],['orange_money','Orange Money'],['other','Autre']], pp?.payment_method || 'bank')}</select></label></div><p><button>Enregistrer</button></p></form>`,
     docs: () => `<form id="df" class="row"><label>Type<select name="ty">${opts(Object.entries(DT), 'other')}</select></label><label>Titre<input name="ti" required></label><label>Fichier (PDF ou image, 10 Mo max)<input name="fl" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" required></label><button>Envoyer</button></form>
       <table style="margin-top:10px"><tr><th>Type</th><th>Titre</th><th>Ajouté le</th><th></th></tr>${(docs || []).map(d => `<tr><td>${DT[d.doc_type]}</td><td>${esc(d.title)}</td><td>${new Date(d.created_at).toLocaleDateString('fr-FR')}</td><td><button class="alt" data-o="${d.id}">Ouvrir</button> <button class="danger" data-x="${d.id}">Supprimer</button></td></tr>`).join('') || '<tr><td colspan="4">Aucun document.</td></tr>'}</table>` }[t]();
   el.innerHTML = `<button class="alt" id="bk" style="margin-bottom:14px">← Retour aux employés</button><div class="two" style="grid-template-columns:1fr 2fr">
   <div class="card" style="text-align:center"><div class="avatar" style="margin:0 auto 10px;width:84px;height:84px;font-size:30px">${esc(ini.toUpperCase())}</div><h3>${esc(e.first_name)} ${esc(e.last_name)}</h3>
   <p><span class="tag ${e.status === 'active' ? 'ok' : ''}">${ST[e.status] || e.status}</span></p><p style="margin:4px 0">${esc(e.job_title) || 'Poste non renseigné'}</p><p style="margin:4px 0;color:var(--mut)">${esc(dn[e.department_id]) || ''}</p>
   <button id="ed" style="margin-top:10px;width:100%">Modifier le profil</button></div>
-  <div class="card"><nav>${[['info','Informations'],['emp','Emploi'],['docs','Documents'],['edit','Modifier']].map(([k,l]) => `<button data-p="${k}" class="${t === k ? 'on' : ''}">${l}</button>`).join('')}</nav><div class="wrap">${body}</div></div></div>`;
+  <div class="card"><nav>${[['info','Informations'],['emp','Emploi'],['docs','Documents'],['pay','Salaire'],['edit','Modifier']].map(([k,l]) => `<button data-p="${k}" class="${t === k ? 'on' : ''}">${l}</button>`).join('')}</nav><div class="wrap">${body}</div></div></div>`;
   $('#bk').onclick = emp; $('#ed').onclick = () => empView(id, 'edit');
   el.querySelectorAll('[data-p]').forEach(b => b.onclick = () => empView(id, b.dataset.p));
   if (t === 'edit') {
@@ -353,6 +357,9 @@ async function empView(id, t = 'info'){
       if (!e.profile_id && f.em) u.email = f.em.trim().toLowerCase();
       const { error } = await sb.from('employees').update(u).eq('id', id); error ? fail(error) : (toast('Profil mis à jour'), empView(id, 'info')); };
   }
+  if (t === 'pay') $('#pf').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
+    const { error } = await sb.from('employee_payroll_profiles').upsert({ employee_id: id, company_id: me.company_id, base_salary: +f.bs, is_executive: f.ex === 'true', tax_parts: +f.tp, payment_method: f.pm });
+    error ? fail(error) : toast('Profil de paie enregistré'); };
   if (t === 'docs') {
     $('#df').onsubmit = async ev => { ev.preventDefault(); const f = new FormData(ev.target), file = f.get('fl');
       if (file.size > 10485760) return toast('Fichier trop lourd (10 Mo max)', true);
@@ -365,6 +372,38 @@ async function empView(id, t = 'info'){
     el.querySelectorAll('[data-x]').forEach(b => b.onclick = async () => { if (!confirm('Supprimer ce document ?')) return; const d = docs.find(x => x.id === b.dataset.x);
       await sb.storage.from('employee-docs').remove([d.storage_path]); const { error } = await sb.from('employee_documents').delete().eq('id', d.id); error ? fail(error) : (toast('Document supprimé'), empView(id, 'docs')); });
   }
+}
+/* ---------- paie ---------- */
+const PS = {draft:'Brouillon',validated:'Validée',paid:'Payée'};
+async function pay(){
+  const el = $('#v'), ym = pay.m || new Date().toISOString().slice(0,7); pay.m = ym; const [y, m] = ym.split('-').map(Number);
+  const [{ data:run, error }, { data:co }] = await Promise.all([sb.from('payroll_runs').select('*').eq('period_year', y).eq('period_month', m).maybeSingle(), sb.from('companies').select('name').eq('id', me.company_id).single()]);
+  if (error) return fail(error);
+  const { data:sl } = run ? await sb.from('payslips').select('id,gross,employee_contributions,income_tax,other_taxes,other_deductions,net,currency,snapshot,breakdown').eq('run_id', run.id).order('created_at') : { data:[] };
+  const cur = run?.currency || 'FCFA', dd = s => (+s.employee_contributions) + (+s.income_tax) + (+s.other_taxes) + (+s.other_deductions);
+  el.innerHTML = `<div class="row" style="margin-bottom:14px"><label>Mois<input type="month" id="pm" value="${ym}"></label>
+  ${!run || run.status === 'draft' ? '<button id="gn">Générer la paie</button>' : ''}${run?.status === 'draft' && run.employee_count > 0 ? '<button id="vl" class="alt">Valider la paie</button>' : ''}</div>
+  ${kpis([['💼','#e7efff','Masse salariale brute',run?.total_gross ?? 0],['💵','#dff3e9','Net à payer',run?.total_net ?? 0],['🏢','#fdeee0','Coût employeur',run?.total_employer_cost ?? 0],['👥','#f0e8fd','Employés payés',run?.employee_count ?? 0]])}
+  <div class="card wrap" style="margin-top:14px"><h3>Bulletins ${run ? '<span class="tag">' + PS[run.status] + '</span>' : ''}</h3><table><tr><th>Employé</th><th>Salaire de base</th><th>Primes</th><th>Retenues</th><th>Net (${cur})</th><th></th></tr>
+  ${(sl || []).map((s, i) => { const b = s.breakdown.find(x => x.code === 'base_salary')?.amount || 0; return `<tr><td>${esc(s.snapshot.name)}</td><td>${fmt(b)}</td><td>${fmt(s.gross - b)}</td><td>${fmt(dd(s))}</td><td><b>${fmt(s.net)}</b></td><td><button class="alt" data-b="${i}">Bulletin</button></td></tr>`; }).join('') || '<tr><td colspan="6">Aucun bulletin pour ce mois. Renseignez les salaires dans la fiche des employés (onglet Salaire), puis générez la paie.</td></tr>'}</table></div>`;
+  $('#pm').onchange = e => { pay.m = e.target.value || ym; pay(); };
+  if ($('#gn')) $('#gn').onclick = async () => { const r = await sb.rpc('generate_payroll_run', { p_year: y, p_month: m }); r.error ? fail(r.error) : (toast('Paie générée'), pay()); };
+  if ($('#vl')) $('#vl').onclick = async () => { if (!confirm('Après validation, les bulletins ne pourront plus être modifiés. Continuer ?')) return; const r = await sb.rpc('validate_payroll_run', { p_run: run.id }); r.error ? fail(r.error) : (toast('Paie validée'), pay()); };
+  el.querySelectorAll('[data-b]').forEach(b => b.onclick = () => slip(sl[b.dataset.b], run, co?.name));
+}
+function slip(s, run, company){
+  const L = { base_salary:'Salaire de base', variable_pay:'Primes et éléments variables', income_tax:'Impôt sur le revenu', fixed_charges:'Charges fixes', other_deductions:'Retenues et avances' }, c = s.currency, row = (n, v) => `<tr><td>${esc(n)}</td><td style="text-align:right">${fmt(v)} ${c}</td></tr>`;
+  const g = s.breakdown.filter(x => x.type === 'earning'), r = s.breakdown.filter(x => ['employee_contribution','income_tax','fixed_charge','deduction'].includes(x.type)), p = s.breakdown.filter(x => x.type === 'employer_contribution');
+  const w = window.open('', '_blank'); if (!w) return toast('Autorisez les fenêtres pour afficher le bulletin', true);
+  w.document.write(`<!doctype html><meta charset="utf-8"><title>Bulletin ${esc(s.snapshot.name)}</title><style>body{font-family:system-ui,sans-serif;max-width:720px;margin:20px auto;padding:0 16px;color:#1b2733}table{width:100%;border-collapse:collapse}td{padding:7px 4px;border-bottom:1px solid #dde3ec}h1{color:#0b2545;margin:0}h3{color:#0b2545;margin:22px 0 4px}.n{background:#0b2545;color:#fff;padding:12px;border-radius:8px;display:flex;justify-content:space-between;margin-top:20px;font-size:18px}small{color:#6b7a8d}</style>
+  <h1>Bulletin de paie</h1><p>${esc(company)}<br><small>Période : ${String(run.period_month).padStart(2,'0')}/${run.period_year}</small></p>
+  <p><b>${esc(s.snapshot.name)}</b><br><small>${esc(s.snapshot.employee_number)} · ${esc(s.snapshot.job_title) || ''}</small></p>
+  <h3>Gains</h3><table>${g.map(x => row(L[x.code] || x.code, x.amount)).join('')}${row('Salaire brut', s.gross)}</table>
+  <h3>Retenues salariales</h3><table>${r.map(x => row(x.name || L[x.code] || x.code, x.amount)).join('') || row('Aucune', 0)}</table>
+  <div class="n"><span>Net à payer</span><b>${fmt(s.net)} ${c}</b></div>
+  <h3>Charges patronales <small>(information)</small></h3><table>${p.map(x => row(x.name, x.amount)).join('') || row('Aucune', 0)}</table>
+  <p><small>Document généré par HR Manager Pro. Calcul basé sur les règles de paie en vigueur dans l’application.</small></p>`);
+  w.document.close(); w.focus(); setTimeout(() => w.print(), 400);
 }
 /* ---------- espace de l’employé : profil et pointage ---------- */
 async function myArea(el){
