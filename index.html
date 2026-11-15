@@ -248,8 +248,10 @@ async function emp(){
   <label>Prénom<input name="fn" required></label><label>Nom<input name="ln" required></label>
   <label>E-mail<input name="em" type="email" required></label><label>Poste<input name="jt"></label>
   <label>Date d’embauche<input name="hd" type="date" required value="${new Date().toISOString().slice(0,10)}"></label><button>Ajouter</button></div></form>
-  <div class="card wrap"><table><tr><th>N°</th><th>Nom</th><th>Poste</th><th>E-mail</th><th>Accès</th><th>Statut</th></tr>
-  ${data.map(e => `<tr><td>${esc(e.employee_number)}</td><td>${esc(e.first_name)} ${esc(e.last_name)}</td><td>${esc(e.job_title)}</td><td>${esc(e.email)}</td><td>${e.profile_id ? '<span class="tag ok">Compte actif</span>' : '<span class="tag">En attente</span>'}</td><td><span class="tag">${ST[e.status] || e.status}</span></td></tr>`).join('') || '<tr><td colspan="6">Aucun employé pour le moment.</td></tr>'}</table></div>`;
+  <input id="qs" placeholder="Rechercher un employé…" style="margin-bottom:10px"><div class="card wrap"><table id="et"><tr><th>N°</th><th>Nom</th><th>Poste</th><th>E-mail</th><th>Accès</th><th>Statut</th><th></th></tr>
+  ${data.map(e => `<tr><td>${esc(e.employee_number)}</td><td>${esc(e.first_name)} ${esc(e.last_name)}</td><td>${esc(e.job_title)}</td><td>${esc(e.email)}</td><td>${e.profile_id ? '<span class="tag ok">Compte actif</span>' : '<span class="tag">En attente</span>'}</td><td><span class="tag">${ST[e.status] || e.status}</span></td><td><button class="alt" data-v="${e.id}">Voir</button></td></tr>`).join('') || '<tr><td colspan="7">Aucun employé pour le moment.</td></tr>'}</table></div>`;
+  document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => empView(b.dataset.v));
+  $('#qs').oninput = ev => document.querySelectorAll('#et tr:not(:first-child)').forEach(r => r.hidden = !r.textContent.toLowerCase().includes(ev.target.value.toLowerCase()));
   $('#cp').onclick = () => navigator.clipboard?.writeText(co.join_code).then(() => toast('Code copié'));
   $('#rg').onclick = async () => { if (!confirm('L’ancien code ne fonctionnera plus. Continuer ?')) return; const r = await sb.rpc('regenerate_join_code'); r.error ? fail(r.error) : (toast('Nouveau code créé'), emp()); };
   $('#nf').onsubmit = async ev => {
@@ -310,6 +312,54 @@ async function leaveBox(el, e){
     const { error } = await sb.from('leave_requests').insert({ company_id: me.company_id, employee_id: e.id, leave_type_id: f.t, start_date: f.a, end_date: f.b, reason: f.r || null });
     error ? fail(error) : (toast('Demande envoyée'), leaveBox(el, e)); };
   el.querySelectorAll('[data-c]').forEach(x => x.onclick = async () => { const { error } = await sb.from('leave_requests').update({ status: 'cancelled' }).eq('id', x.dataset.c); error ? fail(error) : (toast('Demande annulée'), leaveBox(el, e)); });
+}
+/* ---------- profil détaillé d’un employé ---------- */
+const CT = {cdi:'CDI',cdd:'CDD',stage:'Stage',interim:'Intérim',consultant:'Consultant',other:'Autre'}, DT = {contract:'Contrat',id:'Pièce d’identité',cv:'CV',diploma:'Diplôme',certificate:'Attestation',other:'Autre'};
+async function empView(id, t = 'info'){
+  const el = $('#v'); el.innerHTML = '<p>Chargement…</p>';
+  const [{ data:e, error }, { data:deps }, nm, { data:docs }] = await Promise.all([sb.from('employees').select('*').eq('id', id).single(), sb.from('departments').select('id,name').order('name'), names(),
+    sb.from('employee_documents').select('id,doc_type,title,storage_path,created_at').eq('employee_id', id).order('created_at', {ascending:false})]);
+  if (error) return fail(error);
+  const dn = Object.fromEntries((deps || []).map(d => [d.id, d.name])), ini = ((e.first_name || '')[0] || '') + ((e.last_name || '')[0] || '');
+  const R = (l, v) => `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><small style="color:var(--mut)">${l}</small><div><b>${esc(v) || '—'}</b></div></div>`;
+  const opts = (arr, sel, none) => (none ? `<option value="">${none}</option>` : '') + arr.map(([v,l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${esc(l)}</option>`).join('');
+  const body = { info: () => R('E-mail', e.email) + R('Téléphone', e.phone) + R('Date de naissance', e.birth_date) + R('Adresse', e.address) + R('Date d’embauche', e.hire_date),
+    emp: () => R('Poste', e.job_title) + R('Département', dn[e.department_id]) + R('Type de contrat', CT[e.contract_type]) + R('Responsable direct', nm[e.manager_id]) + R('Numéro', e.employee_number) + R('Accès à l’application', e.profile_id ? 'Compte actif' : 'En attente d’inscription'),
+    edit: () => `<form id="ef"><div class="row"><label>Prénom<input name="fn" value="${esc(e.first_name)}" required></label><label>Nom<input name="ln" value="${esc(e.last_name)}" required></label>
+      <label>E-mail<input name="em" type="email" value="${esc(e.email)}" ${e.profile_id ? 'disabled' : ''}></label><label>Téléphone<input name="ph" value="${esc(e.phone)}"></label>
+      <label>Naissance<input name="bd" type="date" value="${esc(e.birth_date)}"></label><label>Adresse<input name="ad" value="${esc(e.address)}"></label>
+      <label>Poste<input name="jt" value="${esc(e.job_title)}"></label><label>Département<select name="dp">${opts((deps || []).map(d => [d.id, d.name]), e.department_id, '—')}</select></label>
+      <label>Responsable<select name="mg">${opts(Object.entries(nm).filter(([k]) => k !== id), e.manager_id, '—')}</select></label>
+      <label>Contrat<select name="ct">${opts(Object.entries(CT), e.contract_type)}</select></label></div>
+      <p><button>Enregistrer</button> <button type="button" class="alt" id="nd">Nouveau département</button></p></form>`,
+    docs: () => `<form id="df" class="row"><label>Type<select name="ty">${opts(Object.entries(DT), 'other')}</select></label><label>Titre<input name="ti" required></label><label>Fichier (PDF ou image, 10 Mo max)<input name="fl" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" required></label><button>Envoyer</button></form>
+      <table style="margin-top:10px"><tr><th>Type</th><th>Titre</th><th>Ajouté le</th><th></th></tr>${(docs || []).map(d => `<tr><td>${DT[d.doc_type]}</td><td>${esc(d.title)}</td><td>${new Date(d.created_at).toLocaleDateString('fr-FR')}</td><td><button class="alt" data-o="${d.id}">Ouvrir</button> <button class="danger" data-x="${d.id}">Supprimer</button></td></tr>`).join('') || '<tr><td colspan="4">Aucun document.</td></tr>'}</table>` }[t]();
+  el.innerHTML = `<button class="alt" id="bk" style="margin-bottom:14px">← Retour aux employés</button><div class="two" style="grid-template-columns:1fr 2fr">
+  <div class="card" style="text-align:center"><div class="avatar" style="margin:0 auto 10px;width:84px;height:84px;font-size:30px">${esc(ini.toUpperCase())}</div><h3>${esc(e.first_name)} ${esc(e.last_name)}</h3>
+  <p><span class="tag ${e.status === 'active' ? 'ok' : ''}">${ST[e.status] || e.status}</span></p><p style="margin:4px 0">${esc(e.job_title) || 'Poste non renseigné'}</p><p style="margin:4px 0;color:var(--mut)">${esc(dn[e.department_id]) || ''}</p>
+  <button id="ed" style="margin-top:10px;width:100%">Modifier le profil</button></div>
+  <div class="card"><nav>${[['info','Informations'],['emp','Emploi'],['docs','Documents'],['edit','Modifier']].map(([k,l]) => `<button data-p="${k}" class="${t === k ? 'on' : ''}">${l}</button>`).join('')}</nav><div class="wrap">${body}</div></div></div>`;
+  $('#bk').onclick = emp; $('#ed').onclick = () => empView(id, 'edit');
+  el.querySelectorAll('[data-p]').forEach(b => b.onclick = () => empView(id, b.dataset.p));
+  if (t === 'edit') {
+    $('#nd').onclick = async () => { const n = prompt('Nom du département :'); if (!n) return; const { error } = await sb.from('departments').insert({ company_id: me.company_id, name: n.trim() }); error ? fail(error) : (toast('Département créé'), empView(id, 'edit')); };
+    $('#ef').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
+      const u = { first_name: f.fn, last_name: f.ln, phone: f.ph || null, birth_date: f.bd || null, address: f.ad || null, job_title: f.jt || null, department_id: f.dp || null, manager_id: f.mg || null, contract_type: f.ct };
+      if (!e.profile_id && f.em) u.email = f.em.trim().toLowerCase();
+      const { error } = await sb.from('employees').update(u).eq('id', id); error ? fail(error) : (toast('Profil mis à jour'), empView(id, 'info')); };
+  }
+  if (t === 'docs') {
+    $('#df').onsubmit = async ev => { ev.preventDefault(); const f = new FormData(ev.target), file = f.get('fl');
+      if (file.size > 10485760) return toast('Fichier trop lourd (10 Mo max)', true);
+      const path = `${me.company_id}/${id}/${Date.now()}-${file.name.replace(/[^\w.\-]/g, '_')}`;
+      const up = await sb.storage.from('employee-docs').upload(path, file); if (up.error) return fail(up.error);
+      const { error } = await sb.from('employee_documents').insert({ company_id: me.company_id, employee_id: id, doc_type: f.get('ty'), title: f.get('ti'), storage_path: path, uploaded_by: me.id });
+      error ? fail(error) : (toast('Document ajouté'), empView(id, 'docs')); };
+    el.querySelectorAll('[data-o]').forEach(b => b.onclick = async () => { const d = docs.find(x => x.id === b.dataset.o), r = await sb.storage.from('employee-docs').createSignedUrl(d.storage_path, 60);
+      r.error ? fail(r.error) : (window.open(r.data.signedUrl, '_blank') || (location.href = r.data.signedUrl)); });
+    el.querySelectorAll('[data-x]').forEach(b => b.onclick = async () => { if (!confirm('Supprimer ce document ?')) return; const d = docs.find(x => x.id === b.dataset.x);
+      await sb.storage.from('employee-docs').remove([d.storage_path]); const { error } = await sb.from('employee_documents').delete().eq('id', d.id); error ? fail(error) : (toast('Document supprimé'), empView(id, 'docs')); });
+  }
 }
 /* ---------- espace de l’employé : profil et pointage ---------- */
 async function myArea(el){
