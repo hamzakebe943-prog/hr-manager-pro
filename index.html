@@ -224,15 +224,20 @@ function chart(w){
 }
 async function dash(){
   const el = $('#v'); el.innerHTML = '<p>Chargement…</p>';
-  const { data:d, error } = await sb.rpc('company_dashboard'); if (error) return fail(error);
+  const [{ data:d, error }, { data:co }] = await Promise.all([sb.rpc('company_dashboard'), sb.from('companies').select('name,join_code').eq('id', me.company_id).single()]); if (error) return fail(error);
   const w = d.attendance_7d || [], today = w[w.length-1], pres = today && today.date === new Date().toISOString().slice(0,10) ? today.present : 0;
   const K = [['👥','#e7efff','Total employés',d.total_employees],['✅','#dff3e9','Présents aujourd’hui',pres],['🌴','#fdeee0','En congé',d.on_leave_today],['⏰','#fde6e6','Retards aujourd’hui',d.late_today]];
   const S = [['Absents aujourd’hui',d.absent_today],['Congés en attente',d.pending_leaves],['Embauches (30 j)',d.new_hires_30d],['Masse salariale (FCFA)',d.monthly_payroll]];
   el.innerHTML = `<div class="grid">${K.map(([i,c,l,v]) => `<div class="kpi kp"><div class="ic" style="background:${c}">${i}</div><div><small>${l}</small><b>${fmt(v)}</b></div></div>`).join('')}</div>
+  <div class="card" style="margin-top:14px"><h3>Inviter vos employés</h3><p style="color:var(--mut);font-size:14px;margin:0 0 10px">Ajoutez d’abord l’employé dans l’onglet Employés, puis envoyez-lui ce code.</p>
+  <span class="code">${esc(co?.join_code)}</span> <button class="alt" id="dc">Copier le code</button> <button id="dw" style="background:#1f9d4d">Envoyer sur WhatsApp</button></div>
   <div class="two" style="margin-top:14px"><div class="card"><h3>Aperçu des présences</h3>${chart(w)}</div>
   <div class="card qa"><h3>Actions rapides</h3><button id="q1">➕ Ajouter un employé</button><button id="q2">🔑 Inviter par code</button><button id="q3">🕘 Mon pointage</button></div></div>
   <div class="grid">${S.map(([l,v]) => `<div class="kpi"><small>${l}</small><b style="font-size:20px">${fmt(v)}</b></div>`).join('')}</div>
   <div class="card" style="margin-top:14px"><h3>Effectifs par département</h3>${(d.headcount_by_department||[]).map(x => `<p style="margin:6px 0">${esc(x.department)} <span class="tag">${x.count}</span></p>`).join('') || '<p>Aucun employé.</p>'}</div>`;
+  const url = location.href.split('#')[0], msg = `Bonjour,\nVotre entreprise ${co?.name} utilise HR Manager Pro.\n1) Ouvrez ${url}\n2) Choisissez « Rejoindre »\n3) Entrez le code ${co?.join_code}, l’e-mail que votre RH a enregistré pour vous, et un mot de passe.\nConfirmez ensuite votre e-mail pour accéder à votre espace.`;
+  $('#dc').onclick = () => navigator.clipboard?.writeText(co.join_code).then(() => toast('Code copié'));
+  $('#dw').onclick = () => window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
   $('#q1').onclick = $('#q2').onclick = () => { tab = 'emp'; show(); }; $('#q3').onclick = () => { tab = 'me'; show(); };
 }
 async function emp(){
