@@ -87,7 +87,7 @@ body.hrapp header{display:none}body.hrapp main{max-width:none;padding:0}
 .kp{display:flex;gap:12px;align-items:center}.ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:22px}
 .two{display:grid;grid-template-columns:2fr 1fr;gap:14px}.qa button{width:100%;margin-bottom:10px;background:#eef3fb;color:var(--navy2);text-align:left}
 @media(max-width:860px){.lay{grid-template-columns:1fr}#sb{position:fixed;z-index:30;left:0;top:0;width:262px;transform:translateX(-105%);transition:.25s}.lay.open #sb{transform:none}.lay.open .scrim{display:block;position:fixed;inset:0;background:#0007;z-index:20}.bg{display:block}.uc div:last-child{display:none}.pad{padding:14px}.two{grid-template-columns:1fr}}
-</style>
+.tag.warn{background:#fdeee0;color:#b9640c}.tag.bad{background:#fde6e6;color:var(--bad)}td button{padding:6px 10px;font-size:13px}</style>
 </head>
 <body class="auth">
 <div id="intro"><button class="skip" id="skip">Passer</button><div class="light"></div><div class="door l"></div><div class="door r"></div>
@@ -186,7 +186,7 @@ async function loadMe(){
 }
 
 /* ---------- entreprise (RH / admin) ---------- */
-const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘',1],['leave','Congés','🌴',1],['pay','Paie','💳',1],['rec','Recrutement','📋',1],['perf','Performance','📈',1],['rep','Rapports','📊',1],['set','Paramètres','⚙️',1],['me','Mon espace','👤']];
+const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘'],['leave','Congés','🌴'],['pay','Paie','💳',1],['rec','Recrutement','📋',1],['perf','Performance','📈',1],['rep','Rapports','📊',1],['set','Paramètres','⚙️',1],['me','Mon espace','👤']];
 function shell(){
   document.body.className = 'hrapp';
   const ini = (me.full_name || me.email || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
@@ -209,7 +209,7 @@ function shell(){
 function show(){
   document.querySelectorAll('.sbn button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
   $('#ttl').textContent = NAV.find(n => n[0] === tab)[1];
-  ({ dash, emp, me: () => myArea($('#v')) })[tab]();
+  ({ dash, emp, att, leave, me: () => myArea($('#v')) })[tab]();
 }
 function staffShell(){ setApp('<div id="v"></div>'); myArea($('#v')); }
 function chart(w){
@@ -259,6 +259,58 @@ async function emp(){
   };
 }
 
+/* ---------- présences et congés ---------- */
+const LS = {pending:'En attente',approved:'Approuvé',rejected:'Refusé',cancelled:'Annulé'}, LC = {pending:'warn',approved:'ok',rejected:'bad',cancelled:''};
+const fd = d => new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', {day:'2-digit', month:'short'});
+const kpis = a => `<div class="grid">${a.map(([i,c,l,v]) => `<div class="kpi kp"><div class="ic" style="background:${c}">${i}</div><div><small>${l}</small><b>${fmt(v)}</b></div></div>`).join('')}</div>`;
+async function names(){ const { data } = await sb.from('employees').select('id,first_name,last_name').order('last_name'); return Object.fromEntries((data || []).map(x => [x.id, x.first_name + ' ' + x.last_name])); }
+async function att(){
+  const el = $('#v'), m = att.m || new Date().toISOString().slice(0,7); att.m = m;
+  const [y, mo] = m.split('-').map(Number), end = m + '-' + String(new Date(y, mo, 0).getDate()).padStart(2,'0');
+  const [{ data, error }, nm] = await Promise.all([sb.from('attendance').select('employee_id,work_date,check_in,check_out,status').gte('work_date', m + '-01').lte('work_date', end).order('work_date', {ascending:false}).order('check_in', {ascending:false}), names()]);
+  if (error) return fail(error);
+  const c = s => data.filter(a => s.includes(a.status)).length;
+  el.innerHTML = `<div class="row" style="margin-bottom:14px"><label>Mois<input type="month" id="mm" value="${m}"></label><button id="ex" class="alt">Exporter (CSV)</button></div>
+  ${kpis([['✅','#dff3e9','Présents',c(['present','half_day'])],['⏰','#fde6e6','Retards',c(['late'])],['🚫','#fdeee0','Absents',c(['absent'])]])}
+  <div class="card wrap" style="margin-top:14px"><table><tr><th>Date</th><th>Employé</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr>
+  ${data.map(a => `<tr><td>${fd(a.work_date)}</td><td>${esc(nm[a.employee_id])}</td><td>${hhmm(a.check_in)}</td><td>${hhmm(a.check_out)}</td><td><span class="tag ${a.status === 'present' ? 'ok' : a.status === 'late' ? 'warn' : a.status === 'absent' ? 'bad' : ''}">${AT[a.status] || a.status}</span></td></tr>`).join('') || '<tr><td colspan="5">Aucun pointage ce mois-ci.</td></tr>'}</table></div>`;
+  $('#mm').onchange = e => { att.m = e.target.value || m; att(); };
+  $('#ex').onclick = () => {
+    const rows = [['Date','Employé','Arrivée','Départ','Statut'], ...data.map(a => [a.work_date, nm[a.employee_id], hhmm(a.check_in), hhmm(a.check_out), AT[a.status] || a.status])];
+    const u = URL.createObjectURL(new Blob(['\ufeff' + rows.map(r => r.map(x => '"' + String(x ?? '').replace(/"/g,'""') + '"').join(';')).join('\n')], {type:'text/csv'}));
+    const a = document.createElement('a'); a.href = u; a.download = 'presences-' + m + '.csv'; a.click();
+  };
+}
+async function leave(){
+  const el = $('#v'), f = leave.f || 'all';
+  const [{ data, error }, nm, { data:lt }] = await Promise.all([sb.from('leave_requests').select('id,employee_id,leave_type_id,start_date,end_date,days,status,reason').order('created_at', {ascending:false}), names(), sb.from('leave_types').select('id,name')]);
+  if (error) return fail(error);
+  const tn = Object.fromEntries((lt || []).map(t => [t.id, t.name])), n = s => data.filter(r => r.status === s).length, rows = data.filter(r => f === 'all' || r.status === f);
+  el.innerHTML = kpis([['⏳','#fdeee0','En attente',n('pending')],['✅','#dff3e9','Approuvées',n('approved')],['❌','#fde6e6','Refusées',n('rejected')]]) +
+  `<nav style="margin-top:14px">${[['all','Toutes'],['pending','En attente'],['approved','Approuvées'],['rejected','Refusées']].map(([k,l]) => `<button data-f="${k}" class="${f===k?'on':''}">${l}</button>`).join('')}</nav>
+  <div class="card wrap"><table><tr><th>Employé</th><th>Type</th><th>Période</th><th>Jours</th><th>Statut</th><th></th></tr>
+  ${rows.map(r => `<tr title="${esc(r.reason)}"><td>${esc(nm[r.employee_id])}</td><td>${esc(tn[r.leave_type_id])}</td><td>${fd(r.start_date)} → ${fd(r.end_date)}</td><td>${r.days}</td><td><span class="tag ${LC[r.status]}">${LS[r.status]}</span></td>
+  <td>${r.status === 'pending' ? `<button data-id="${r.id}" data-do="approved">Approuver</button> <button class="danger" data-id="${r.id}" data-do="rejected">Refuser</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="6">Aucune demande.</td></tr>'}</table></div>`;
+  document.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { leave.f = b.dataset.f; leave(); });
+  document.querySelectorAll('[data-do]').forEach(b => b.onclick = async () => {
+    const upd = { status: b.dataset.do }; if (upd.status === 'rejected') { const c = prompt('Motif du refus (facultatif) :'); if (c === null) return; upd.review_comment = c || null; }
+    const { error } = await sb.from('leave_requests').update(upd).eq('id', b.dataset.id);
+    error ? fail(error) : (toast(upd.status === 'approved' ? 'Demande approuvée' : 'Demande refusée'), leave());
+  });
+}
+async function leaveBox(el, e){
+  const [{ data:lt }, { data:rq }] = await Promise.all([sb.from('leave_types').select('id,name,code').order('name'), sb.from('leave_requests').select('id,leave_type_id,start_date,end_date,days,status').eq('employee_id', e.id).order('start_date', {ascending:false}).limit(10)]);
+  const an = (lt || []).find(t => t.code === 'annual'), b = an ? (await sb.rpc('leave_balance', { p_employee: e.id, p_type: an.id })).data?.[0] : null, tn = Object.fromEntries((lt || []).map(t => [t.id, t.name]));
+  el.innerHTML = `<h3 style="margin:18px 0 8px">Mes congés</h3>${kpis([['📅','#e7efff','Droits annuels (jours)',b?.allowance ?? 0],['🗓️','#dff3e9','Utilisés ou demandés',b?.used ?? 0],['🏖️','#fdeee0','Restants',b?.remaining ?? 0]])}
+  <form class="card" id="lf" style="margin-top:14px"><h3>Nouvelle demande</h3><div class="row"><label>Type<select name="t">${(lt || []).map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select></label>
+  <label>Du<input type="date" name="a" required></label><label>Au<input type="date" name="b" required></label><label>Motif<input name="r"></label><button>Envoyer</button></div></form>
+  <div class="card wrap"><table><tr><th>Type</th><th>Période</th><th>Jours</th><th>Statut</th><th></th></tr>
+  ${(rq || []).map(r => `<tr><td>${esc(tn[r.leave_type_id])}</td><td>${fd(r.start_date)} → ${fd(r.end_date)}</td><td>${r.days}</td><td><span class="tag ${LC[r.status]}">${LS[r.status]}</span></td><td>${r.status === 'pending' ? `<button class="alt" data-c="${r.id}">Annuler</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="5">Aucune demande.</td></tr>'}</table></div>`;
+  $('#lf').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
+    const { error } = await sb.from('leave_requests').insert({ company_id: me.company_id, employee_id: e.id, leave_type_id: f.t, start_date: f.a, end_date: f.b, reason: f.r || null });
+    error ? fail(error) : (toast('Demande envoyée'), leaveBox(el, e)); };
+  el.querySelectorAll('[data-c]').forEach(x => x.onclick = async () => { const { error } = await sb.from('leave_requests').update({ status: 'cancelled' }).eq('id', x.dataset.c); error ? fail(error) : (toast('Demande annulée'), leaveBox(el, e)); });
+}
 /* ---------- espace de l’employé : profil et pointage ---------- */
 async function myArea(el){
   el.innerHTML = '<p>Chargement…</p>';
@@ -272,6 +324,7 @@ async function myArea(el){
   <div class="row"><button id="ci">Pointer mon arrivée</button><button id="co" class="alt">Pointer mon départ</button></div></div>
   <div class="card wrap"><h3>Mes derniers pointages</h3><table><tr><th>Date</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr>
   ${(at||[]).map(a => `<tr><td>${esc(a.work_date)}</td><td>${hhmm(a.check_in)}</td><td>${hhmm(a.check_out)}</td><td><span class="tag">${AT[a.status] || a.status}</span></td></tr>`).join('') || '<tr><td colspan="4">Aucun pointage pour le moment.</td></tr>'}</table></div>`;
+  el.insertAdjacentHTML('beforeend','<div id="lv"></div>'); leaveBox($('#lv'), e);
   const go = (fn, ok) => async () => { const { error } = await sb.rpc(fn); error ? fail(error) : (toast(ok), myArea(el)); };
   $('#ci').onclick = go('check_in', 'Arrivée enregistrée'); $('#co').onclick = go('check_out', 'Départ enregistré');
 }
