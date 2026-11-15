@@ -5,62 +5,96 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HR Manager Pro</title>
 <style>
-:root{--navy:#0b2545;--navy2:#13315c;--sky:#8fb0e0;--bg:#eef2f7;--card:#fff;--line:#dde3ec;--txt:#1b2733;--mut:#6b7a8d;--ok:#1f8a5b;--bad:#c0392b}
+:root{--navy:#0b2545;--navy2:#13315c;--sky:#9db4d6;--bg:#f3f5f8;--card:#fff;--line:#dde3ec;--txt:#1b2733;--mut:#6b7a8d;--ok:#1f8a5b;--bad:#c0392b}
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
-/* ---- Intro WELCOME ---- */
-#intro{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 45%,#1d4e89 0%,#0b2545 55%,#050f1f 100%);animation:fade .9s 4.6s forwards}
-.door{position:absolute;top:0;bottom:0;width:50.5%;z-index:2;background:linear-gradient(160deg,#0f2d57,#06142a);animation:open 1.5s .9s cubic-bezier(.77,0,.18,1) forwards}
-.door.l{left:0;border-right:2px solid var(--sky);--x:-101%}.door.r{right:0;border-left:2px solid var(--sky);--x:101%}
-.door::after{content:"";position:absolute;inset:14% 14%;border:1px solid #8fb0e033;border-radius:6px}
-.core{position:relative;text-align:center;color:#fff;padding:0 12px}
-.core .logo{width:64px;height:64px;margin:0 auto 22px;border:2px solid var(--sky);border-radius:16px;display:grid;place-items:center;font-weight:700;font-size:22px;color:var(--sky);opacity:0;animation:up .8s 1.6s forwards}
-#w{margin:0;font-size:clamp(34px,11vw,76px);letter-spacing:.26em;font-weight:300;padding-left:.26em}
-#w span{display:inline-block;opacity:0;transform:translateY(16px);animation:up .7s forwards}
-.core p{margin:16px 0 0;opacity:0;letter-spacing:.32em;text-transform:uppercase;font-size:12px;color:#c9d6ea;animation:up .8s 3s forwards}
-.line{display:block;height:2px;width:0;background:var(--sky);margin:18px auto 0;animation:grow 1s 2.6s forwards}
-#skip{position:absolute;right:16px;bottom:18px;z-index:3;background:#ffffff1f;color:#fff;border:1px solid #ffffff33;border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer}
-@keyframes open{to{transform:translateX(var(--x))}}@keyframes fade{to{opacity:0;visibility:hidden}}
-@keyframes up{to{opacity:1;transform:none}}@keyframes grow{to{width:170px}}
-/* ---- Interface ---- */
 header{background:var(--navy);color:#fff;display:flex;align-items:center;gap:12px;padding:12px 16px;position:sticky;top:0;z-index:5}
-header .mk{width:30px;height:30px;border:1.5px solid var(--sky);border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--sky)}
-header b{font-size:17px;flex:1}header b span{color:var(--sky);font-weight:500}
-#who{font-size:12px;color:#c5d3e8;max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-button{background:var(--navy);color:#fff;border:0;border-radius:10px;padding:11px 15px;font-size:15px;cursor:pointer}
-header button{background:#ffffff22;padding:7px 10px;font-size:13px}
+body.auth header{display:none}
+header b{font-size:18px;flex:1}header b span{color:var(--sky);font-weight:500}
+#who{font-size:12px;color:#c5d3e8;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+button{background:var(--navy);color:#fff;border:0;border-radius:10px;padding:11px 16px;font-size:15px;cursor:pointer;font-weight:600}
+header button{background:#fff2;padding:7px 10px;font-size:13px}
 button.alt{background:#e8edf5;color:var(--navy)}button.danger{background:var(--bad)}button:disabled{opacity:.5}
-main{max-width:980px;margin:0 auto;padding:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 2px 10px #0b254510}
-.hero{background:linear-gradient(135deg,#0b2545,#1d4e89);color:#fff;margin:-16px -16px 0;padding:38px 22px 70px;text-align:center}
-.hero .bd{display:inline-block;border:1px solid #ffffff44;border-radius:20px;padding:4px 14px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#c9d6ea}
-.hero h1{font-size:clamp(24px,6vw,38px);margin:16px auto 10px;max-width:640px;line-height:1.2;font-weight:600}.hero p{margin:0 auto;max-width:520px;color:#c9d6ea;line-height:1.5}
-.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}.chips i{font-style:normal;font-size:12px;background:#ffffff1c;border-radius:20px;padding:5px 12px}
-.auth{max-width:430px;margin:-44px auto 24px;position:relative}.auth h2{margin:0 0 4px;color:var(--navy)}
-.tabs{display:flex;gap:6px;margin-bottom:12px;background:#e8edf5;border-radius:12px;padding:4px}.tabs button{flex:1;background:transparent;color:var(--mut);padding:9px 4px;font-size:13px}.tabs button.on{background:#fff;color:var(--navy);box-shadow:0 1px 4px #0b254520}
+main{max-width:980px;margin:0 auto;padding:16px}body.auth main{max-width:none;padding:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
 label{display:block;font-size:13px;color:var(--mut);margin:10px 0}
-input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:16px;margin-top:4px;background:#fff;font-family:inherit}
-.link{color:var(--navy2);text-align:center;cursor:pointer;text-decoration:underline;margin:14px 0 0;font-size:14px}
+input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:16px;margin-top:4px;background:#fff}
+input:focus,select:focus{outline:2px solid var(--sky);border-color:var(--navy2)}
 nav{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto}nav button{background:#e8edf5;color:var(--navy);white-space:nowrap}nav button.on{background:var(--navy);color:#fff}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}.kpi small{color:var(--mut);display:block;font-size:12px}.kpi b{font-size:24px;color:var(--navy)}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.kpi small{color:var(--mut);display:block;font-size:12px}.kpi b{font-size:24px;color:var(--navy)}
 .wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--mut);font-weight:600;font-size:12px}
-.bars{display:flex;align-items:flex-end;gap:8px;height:110px;margin-top:8px}.bars div{flex:1;text-align:center;font-size:11px;color:var(--mut)}.bars i{display:block;background:var(--navy2);border-radius:4px 4px 0 0;min-height:2px}
+.bars{display:flex;align-items:flex-end;gap:8px;height:110px;margin-top:8px}
+.bars div{flex:1;text-align:center;font-size:11px;color:var(--mut)}.bars i{display:block;background:var(--navy2);border-radius:4px 4px 0 0;min-height:2px}
 .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end}
-.tag{background:#e8edf5;color:var(--navy);border-radius:20px;padding:2px 9px;font-size:12px}h3{margin:0 0 8px;color:var(--navy)}
-.inv{background:#eaf2ff;border-color:#b9d1f5}.inv b{font-size:26px;letter-spacing:.18em;color:var(--navy)}
-.me p{margin:6px 0}.me small{color:var(--mut)}
+.tag{background:#e8edf5;color:var(--navy);border-radius:20px;padding:2px 9px;font-size:12px}.tag.ok{background:#dff3e9;color:var(--ok)}
+h3{margin:0 0 8px;color:var(--navy)}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ok);color:#fff;padding:11px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:.2s;max-width:90%;z-index:99}
 #toast.show{opacity:1}#toast.bad{background:var(--bad)}
+/* écran d’accueil */
+.authwrap{min-height:100vh;display:grid;grid-template-columns:1fr 1fr}
+.brand{background:linear-gradient(150deg,#06142b,var(--navy2));color:#fff;padding:48px 40px;display:flex;flex-direction:column;justify-content:center}
+.logo{width:54px;height:54px;border-radius:14px;background:#fff;color:var(--navy);display:grid;place-items:center;font-weight:800;font-size:22px;margin-bottom:18px}
+.brand h1{margin:0 0 10px;font-size:32px}.brand h1 span{color:var(--sky);font-weight:500}.brand p{color:#c5d3e8;font-size:17px;max-width:380px}
+.brand ul{padding:0;list-style:none;margin-top:22px}.brand li{margin:10px 0;color:#dbe6f6}.brand li:before{content:"✓";color:var(--sky);margin-right:10px;font-weight:700}
+.formside{display:flex;align-items:center;justify-content:center;padding:24px}
+.formcard{width:100%;max-width:420px}
+.tabs{display:flex;gap:6px;margin-bottom:8px;background:#e8edf5;border-radius:12px;padding:4px}
+.tabs button{flex:1;background:transparent;color:var(--navy);padding:9px 6px;font-size:13px}.tabs button.on{background:#fff;box-shadow:0 1px 4px #0002}
+@media(max-width:760px){.authwrap{grid-template-columns:1fr}.brand{padding:28px 24px}.brand h1{font-size:24px}.brand ul{display:none}}
+/* introduction animée */
+#intro{position:fixed;inset:0;z-index:90;background:#06142b;overflow:hidden;transition:opacity .7s}
+#intro.gone{opacity:0;pointer-events:none}
+.door{position:absolute;top:0;bottom:0;width:50.5%;background:linear-gradient(135deg,#0b2545,#13315c);z-index:3;transition:transform 1.5s cubic-bezier(.77,0,.18,1) .7s}
+.door.l{left:0;border-right:1px solid #9db4d6}.door.r{right:0;transform:none}
+#intro.open .door.l{transform:translateX(-101%)}#intro.open .door.r{transform:translateX(101%)}
+.light{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,#1d4e89 0,#0b2545 40%,#06142b 75%);animation:pulse 5s ease-in-out infinite alternate}
+@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.15)}}
+.stage{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;padding:20px}
+.word{font-size:clamp(38px,11vw,88px);font-weight:300;letter-spacing:.18em;margin:0;padding-left:.18em}
+.word span{display:inline-block;opacity:0;transform:translateY(30px) scale(.9);filter:blur(8px)}
+#intro.open .word span{animation:rise .9s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(1.6s + var(--i)*.1s)}
+@keyframes rise{to{opacity:1;transform:none;filter:none}}
+.line{height:2px;width:0;background:linear-gradient(90deg,transparent,var(--sky),transparent);margin:18px 0}
+#intro.open .line{animation:grow 1.2s ease forwards 2.6s}@keyframes grow{to{width:min(320px,70vw)}}
+.sub{opacity:0;color:#c5d3e8;letter-spacing:.12em;font-size:14px;text-transform:uppercase}
+#intro.open .sub{animation:fade 1s forwards 3s}
+.enter{opacity:0;margin-top:34px;background:#fff;color:var(--navy);padding:13px 34px;border-radius:30px;letter-spacing:.08em}
+#intro.open .enter{animation:fade 1s forwards 3.5s}@keyframes fade{to{opacity:1}}
+.skip{position:absolute;top:16px;right:16px;z-index:5;background:#fff1;font-size:13px;padding:7px 12px;border:1px solid #fff3}
+@media(prefers-reduced-motion:reduce){.door,.light,.word span,.line,.sub,.enter{animation:none!important;transition:none!important;opacity:1!important;transform:none!important;filter:none!important}.door{display:none}.line{width:200px}}
+/* profil employé */
+.avatar{width:64px;height:64px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:700;font-size:22px}
+.prof{display:flex;gap:16px;align-items:center}.prof h3{margin:0}.prof p{margin:2px 0;color:var(--mut);font-size:14px}
+.code{font-size:26px;letter-spacing:.2em;font-weight:800;color:var(--navy);background:#e8edf5;padding:8px 14px;border-radius:10px;display:inline-block}
+body.hrapp header{display:none}body.hrapp main{max-width:none;padding:0}
+.lay{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+#sb{background:#fff;border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.sbl{display:flex;align-items:center;gap:10px;padding:4px 8px 16px;color:var(--navy);font-size:17px}.sbl span{color:var(--navy2);font-weight:500}
+.logo.sm{width:36px;height:36px;font-size:15px;margin:0;background:var(--navy);color:#fff;border-radius:10px}
+.sbn{flex:1;overflow:auto;display:flex;flex-direction:column;gap:2px}
+.sbn button{background:transparent;color:#41536b;text-align:left;display:flex;align-items:center;gap:10px;padding:10px 12px;font-weight:500;border-radius:10px}
+.sbn button.on{background:#e7efff;color:var(--navy2);font-weight:700}.sbn button:hover{background:#f0f4fa}
+.sbn em{margin-left:auto;font-style:normal;font-size:10px;background:#eef1f6;color:var(--mut);padding:2px 7px;border-radius:10px}
+.plan{background:linear-gradient(135deg,var(--navy),#1c4f94);color:#fff;border-radius:14px;padding:14px;margin:10px 0;font-size:13px}.plan:empty{display:none}.plan b{display:block;font-size:15px}.plan button{width:100%;margin-top:10px;background:#fff;color:var(--navy);padding:8px}
+.lo{background:#e8edf5;color:var(--navy)}
+.top{display:flex;align-items:center;gap:12px;padding:14px 22px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:4}
+.top h2{margin:0;flex:1;font-size:20px;color:var(--navy)}.bg{display:none;padding:8px 12px}
+.uc{display:flex;align-items:center;gap:10px}.uc small{display:block;color:var(--mut);font-size:12px}.avatar.s{width:38px;height:38px;font-size:14px}
+.pad{padding:22px;max-width:1100px}.scrim{display:none}
+.kp{display:flex;gap:12px;align-items:center}.ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:22px}
+.two{display:grid;grid-template-columns:2fr 1fr;gap:14px}.qa button{width:100%;margin-bottom:10px;background:#eef3fb;color:var(--navy2);text-align:left}
+@media(max-width:860px){.lay{grid-template-columns:1fr}#sb{position:fixed;z-index:30;left:0;top:0;width:262px;transform:translateX(-105%);transition:.25s}.lay.open #sb{transform:none}.lay.open .scrim{display:block;position:fixed;inset:0;background:#0007;z-index:20}.bg{display:block}.uc div:last-child{display:none}.pad{padding:14px}.two{grid-template-columns:1fr}}
 </style>
 </head>
-<body>
-<div id="intro"><div class="door l"></div><div class="door r"></div>
-<div class="core"><div class="logo">HR</div><h1 id="w"></h1><span class="line"></span><p>HR Manager Pro</p></div>
-<button id="skip">Passer</button></div>
-<header><div class="mk">HR</div><b>HR Manager <span>Pro</span></b><div id="who"></div><button id="out" hidden>Déconnexion</button></header>
-<main id="app"></main><div id="toast"></div>
+<body class="auth">
+<div id="intro"><button class="skip" id="skip">Passer</button><div class="light"></div><div class="door l"></div><div class="door r"></div>
+<div class="stage"><h2 class="word" id="word"></h2><div class="line"></div><div class="sub">HR Manager Pro · La gestion RH, simplifiée</div><button class="enter" id="enter">ENTRER</button></div></div>
+<header><b>HR Manager <span>Pro</span></b><div id="who"></div><button id="out" hidden>Déconnexion</button></header>
+<main id="app"></main>
+<div id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 const sb = supabase.createClient('https://egxoglirjqnzkullsrez.supabase.co','sb_publishable_XnzmsUCYgpPclGJlQMYPJg_XjYFlEYh');
@@ -69,158 +103,180 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const fmt = n => new Intl.NumberFormat('fr-FR').format(n ?? 0);
 const SUB = {trial:'Essai',active:'Actif',expired:'Expiré',suspended:'Suspendu',past_due:'Impayé',cancelled:'Annulé'};
 const ST = {active:'Actif',on_leave:'En congé',terminated:'Parti'};
-const LV = {pending:'En attente',approved:'Approuvé',rejected:'Refusé',cancelled:'Annulé'};
-let me = null, mode = 'login', tab = 'dash', rec = location.hash.includes('type=recovery');
-
-/* intro */
-$('#w').innerHTML = 'WELCOME'.split('').map((c, i) => `<span style="animation-delay:${1.9 + i * .12}s">${c}</span>`).join('');
-const endIntro = () => { $('#intro').style.display = 'none'; sessionStorage.seen = 1; };
-if (sessionStorage.seen) endIntro(); else { setTimeout(endIntro, 5500); $('#skip').onclick = endIntro; }
+const AT = {present:'Présent',late:'Retard',absent:'Absent',half_day:'Demi-journée',leave:'Congé'};
+const hhmm = t => t ? new Date(t).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '—';
+let me = null, mode = 'login', tab = 'dash';
 
 const setApp = h => $('#app').innerHTML = h;
-function toast(m, bad){ const t = $('#toast'); t.textContent = m; t.className = bad ? 'bad show' : 'show'; setTimeout(() => t.className = '', 4500); }
+function toast(m, bad){ const t = $('#toast'); t.textContent = m; t.className = bad ? 'bad show' : 'show'; setTimeout(() => t.className = '', 5000); }
 const fail = e => toast(e?.message || 'Une erreur est survenue', true);
 const hr = () => me && ['company_admin','hr'].includes(me.role);
-const today = () => new Date().toLocaleDateString('sv');
+
+/* ---------- introduction ---------- */
+function intro(){
+  const w = $('#word'); w.innerHTML = [...'WELCOME'].map((c,i) => `<span style="--i:${i}">${c}</span>`).join('');
+  setTimeout(() => $('#intro').classList.add('open'), 300);
+  const close = () => { $('#intro').classList.add('gone'); try{sessionStorage.introSeen = 1}catch(e){} setTimeout(() => $('#intro').remove(), 800); };
+  $('#enter').onclick = close; $('#skip').onclick = close;
+}
+function noIntro(){ $('#intro').remove(); }
 
 async function init(){
-  if (rec) return recoverView();
   const { data:{ session } } = await sb.auth.getSession();
+  let seen = false; try{ seen = !!sessionStorage.introSeen }catch(e){}
+  session || seen ? noIntro() : intro();
   session ? loadMe() : authView();
 }
-sb.auth.onAuthStateChange(ev => { if (ev === 'PASSWORD_RECOVERY') { rec = true; recoverView(); } if (ev === 'SIGNED_OUT') { me = null; authView(); } });
+sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') { me = null; authView(); } });
 $('#out').onclick = () => sb.auth.signOut();
 
-/* ---------- Accueil / connexion ---------- */
+/* ---------- connexion / inscription ---------- */
 function authView(){
-  $('#out').hidden = true; $('#who').textContent = '';
+  document.body.className = 'auth'; $('#out').hidden = true; $('#who').textContent = '';
   const su = mode === 'signup', jn = mode === 'join';
-  const T = [['login','Connexion'],['signup','Créer une entreprise'],['join','Rejoindre avec un code']];
-  setApp(`<section class="hero"><span class="bd">Plateforme RH</span><h1>Toutes vos ressources humaines, au même endroit</h1>
-  <p>Employés, présences, congés, paie et recrutement : simple, sécurisé et pensé pour l’Afrique et le monde.</p>
-  <div class="chips"><i>Employés</i><i>Présences</i><i>Congés</i><i>Paie</i><i>Recrutement</i></div></section>
-  <form class="card auth" id="f"><div class="tabs">${T.map(([k,l]) => `<button type="button" data-m="${k}" class="${mode===k?'on':''}">${l}</button>`).join('')}</div>
-  ${su ? `<label>Nom de l’entreprise<input name="company" required minlength="2"></label><label>Votre nom complet<input name="name" required></label>
+  const tabs = [['login','Connexion'],['signup','Créer une entreprise'],['join','Rejoindre']];
+  setApp(`<div class="authwrap"><aside class="brand"><div class="logo">HR</div><h1>HR Manager <span>Pro</span></h1>
+  <p>Toute la gestion RH de votre entreprise, au même endroit.</p>
+  <ul><li>Employés, présences et congés</li><li>Paie adaptée à chaque pays</li><li>Recrutement et performance</li></ul></aside>
+  <section class="formside"><form class="card formcard" id="f"><div class="tabs">${tabs.map(([k,l]) => `<button type="button" data-m="${k}" class="${mode===k?'on':''}">${l}</button>`).join('')}</div>
+  ${su ? `<label>Nom de l’entreprise<input name="company" required minlength="2"></label>
+  <label>Votre nom complet<input name="name" required></label>
   <label>Pays<select name="country"><option value="SN">Sénégal</option><option value="CI">Côte d’Ivoire</option><option value="ML">Mali</option><option value="BF">Burkina Faso</option><option value="GN">Guinée</option><option value="CM">Cameroun</option><option value="MA">Maroc</option><option value="FR">France</option></select></label>
   <label>Langue<select name="lang"><option value="fr">Français</option><option value="en">English</option><option value="ar">العربية</option><option value="de">Deutsch</option></select></label>` : ''}
-  ${jn ? `<label>Code d’invitation (donné par votre employeur)<input name="code" required maxlength="8" style="text-transform:uppercase;letter-spacing:.2em"></label>` : ''}
+  ${jn ? `<p style="color:var(--mut);font-size:14px">Utilisez le code donné par votre entreprise et l’e-mail enregistré par votre RH.</p>
+  <label>Code de l’entreprise<input name="code" required maxlength="12" style="text-transform:uppercase;letter-spacing:.15em"></label>
+  <label>Votre nom complet<input name="name" required></label>` : ''}
   <label>E-mail<input name="email" type="email" required autocomplete="email"></label>
   <label>Mot de passe<input name="pw" type="password" required minlength="8" autocomplete="${mode==='login' ? 'current-password' : 'new-password'}"></label>
-  <button style="width:100%;margin-top:8px">${su ? 'Créer mon entreprise' : jn ? 'Rejoindre mon entreprise' : 'Se connecter'}</button>
-  ${mode === 'login' ? '<p class="link" id="fg">Mot de passe oublié ?</p>' : ''}</form>`);
+  <button style="width:100%;margin-top:8px">${su ? 'Créer mon entreprise' : jn ? 'Rejoindre mon entreprise' : 'Se connecter'}</button></form></section></div>`);
   document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { mode = b.dataset.m; authView(); });
-  if ($('#fg')) $('#fg').onclick = async () => {
-    const em = $('#f').email.value; if (!em) return toast('Saisissez d’abord votre e-mail', true);
-    const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: location.href.split('#')[0] });
-    error ? fail(error) : toast('Un e-mail de réinitialisation vous a été envoyé');
-  };
   $('#f').onsubmit = async e => {
     e.preventDefault();
-    const f = Object.fromEntries(new FormData(e.target)), b = e.target.querySelector('button:not([type])'); b.disabled = true;
+    const f = Object.fromEntries(new FormData(e.target)), b = e.target.querySelector('button[style]'); b.disabled = true;
+    const done = () => b.disabled = false, redirect = location.href.split('#')[0];
     if (mode === 'login') {
-      const { error } = await sb.auth.signInWithPassword({ email: f.email, password: f.pw });
-      b.disabled = false; return error ? fail(error) : loadMe();
+      const { error } = await sb.auth.signInWithPassword({ email: f.email, password: f.pw }); done();
+      return error ? fail(error) : loadMe();
     }
-    if (jn) localStorage.pendingCode = f.code.trim().toUpperCase();
-    const data0 = su ? { company_name: f.company, full_name: f.name, country: f.country, language: f.lang } : {};
-    const { data, error } = await sb.auth.signUp({ email: f.email, password: f.pw, options: { emailRedirectTo: location.href.split('#')[0], data: data0 } });
-    b.disabled = false; if (error) return fail(error);
-    if (data.session) loadMe(); else setApp('<div class="card auth" style="margin-top:24px"><h2>Vérifiez votre e-mail</h2><p>Un lien de confirmation a été envoyé à <b>' + esc(f.email) + '</b>. Ouvrez-le, puis connectez-vous' + (jn ? ' : votre code sera utilisé automatiquement.' : '.') + '</p><button onclick="mode=\'login\';authView()" style="width:100%">Aller à la connexion</button></div>');
+    let meta;
+    if (su) meta = { company_name: f.company, full_name: f.name, country: f.country, language: f.lang };
+    else {
+      const { data:ok, error:ce } = await sb.rpc('check_join_code', { p_code: f.code, p_email: f.email });
+      if (ce) { done(); return fail(ce); }
+      if (!ok) { done(); return toast('Code incorrect, ou votre e-mail n’a pas été enregistré par votre RH.', true); }
+      meta = { join_code: f.code.trim().toUpperCase(), full_name: f.name, language: 'fr' };
+    }
+    const { data, error } = await sb.auth.signUp({ email: f.email, password: f.pw, options: { emailRedirectTo: redirect, data: meta } }); done();
+    if (error) return fail(error);
+    if (data.session) loadMe(); else setApp(`<div class="authwrap" style="grid-template-columns:1fr"><section class="formside"><div class="card formcard"><h3>Vérifiez votre e-mail</h3><p>Un lien de confirmation a été envoyé à <b>${esc(f.email)}</b>. Ouvrez-le, puis revenez vous connecter.</p><button onclick="mode='login';authView()">Aller à la connexion</button></div></section></div>`);
   };
-}
-function recoverView(){
-  $('#out').hidden = true;
-  setApp(`<form class="card auth" id="r" style="margin-top:40px"><h2>Nouveau mot de passe</h2><label>Mot de passe (8 caractères minimum)<input name="pw" type="password" minlength="8" required autocomplete="new-password"></label><button style="width:100%">Enregistrer</button></form>`);
-  $('#r').onsubmit = async e => { e.preventDefault(); const { error } = await sb.auth.updateUser({ password: e.target.pw.value }); if (error) return fail(error); rec = false; history.replaceState(null, '', location.pathname); toast('Mot de passe mis à jour'); loadMe(); };
 }
 
 async function loadMe(){
   const { data:{ user } } = await sb.auth.getUser();
   if (!user) return authView();
-  let { data, error } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  const getP = () => sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  let { data, error } = await getP(), msg = '';
   if (error) return fail(error);
+  if (!data) { const r = await sb.rpc('claim_employee_profile'); if (r.error) msg = r.error.message; else ({ data } = await getP()); }
   $('#out').hidden = false;
-  if (!data && localStorage.pendingCode) {
-    const { error: e2 } = await sb.rpc('claim_invitation', { p_code: localStorage.pendingCode });
-    delete localStorage.pendingCode; if (e2) toast(e2.message, true); else return loadMe();
-  }
-  if (!data) {
-    setApp('<form class="card auth" id="c" style="margin-top:30px"><h2>Rejoindre mon entreprise</h2><p style="color:var(--mut)">Saisissez le code d’invitation remis par votre employeur.</p><label>Code<input name="code" required maxlength="8" style="text-transform:uppercase;letter-spacing:.2em"></label><button style="width:100%">Valider</button></form>');
-    $('#c').onsubmit = async e => { e.preventDefault(); const { error } = await sb.rpc('claim_invitation', { p_code: e.target.code.value }); error ? fail(error) : loadMe(); };
-    return;
-  }
-  me = data; $('#who').textContent = me.full_name || me.email; tab = 'dash';
-  me.role === 'super_admin' ? adminView() : hr() ? shell() : (setApp('<div id="v"></div>'), space($('#v')));
+  if (!data) { document.body.className = 'auth'; return setApp(`<div class="authwrap" style="grid-template-columns:1fr"><section class="formside"><div class="card formcard"><h3>Compte non rattaché</h3><p>${esc(msg) || 'Ce compte n’est rattaché à aucune entreprise.'}</p><button onclick="sb.auth.signOut()">Se déconnecter</button></div></section></div>`); }
+  me = data; document.body.className = ''; $('#who').textContent = me.full_name || me.email; tab = 'dash';
+  me.role === 'super_admin' ? adminView() : hr() ? shell() : staffShell();
 }
 
-/* ---------- Entreprise (RH / admin) ---------- */
+/* ---------- entreprise (RH / admin) ---------- */
+const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘',1],['leave','Congés','🌴',1],['pay','Paie','💳',1],['rec','Recrutement','📋',1],['perf','Performance','📈',1],['rep','Rapports','📊',1],['set','Paramètres','⚙️',1],['me','Mon espace','👤']];
 function shell(){
-  setApp(`<nav>${[['dash','Tableau de bord'],['emp','Employés'],['me','Mon espace']].map(([k,l]) => `<button data-t="${k}" class="${tab===k?'on':''}">${l}</button>`).join('')}</nav><div id="v"></div>`);
-  document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.t; shell(); });
-  ({ dash, emp, me: space })[tab]($('#v'));
+  document.body.className = 'hrapp';
+  const ini = (me.full_name || me.email || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+  setApp(`<div class="lay" id="lay"><div class="scrim" id="scrim"></div><aside id="sb"><div class="sbl"><div class="logo sm">HR</div><b>HR Manager <span>Pro</span></b></div>
+  <div class="sbn">${NAV.map(([k,l,i,s]) => `<button data-t="${k}" data-s="${s||''}"><span>${i}</span>${l}${s ? '<em>Bientôt</em>' : ''}</button>`).join('')}</div>
+  <div class="plan" id="plan"></div><button class="lo" id="lo">Déconnexion</button></aside>
+  <div class="mainc"><div class="top"><button class="alt bg" id="bg">☰</button><h2 id="ttl"></h2><div class="uc"><div class="avatar s">${esc(ini)}</div><div><b>${esc(me.full_name || me.email)}</b><small>${me.role === 'company_admin' ? 'Administrateur' : 'Ressources humaines'}</small></div></div></div><div id="v" class="pad"></div></div></div>`);
+  const lay = $('#lay'); $('#bg').onclick = () => lay.classList.toggle('open'); $('#scrim').onclick = () => lay.classList.remove('open'); $('#lo').onclick = () => sb.auth.signOut();
+  document.querySelectorAll('.sbn button').forEach(b => b.onclick = () => {
+    if (b.dataset.s) return toast('Bientôt disponible : ' + b.textContent.replace('Bientôt','').trim());
+    tab = b.dataset.t; lay.classList.remove('open'); show();
+  });
+  sb.from('subscriptions').select('status,current_period_end,plans(name,max_employees)').maybeSingle().then(({ data:s }) => {
+    if (!s) return; const end = s.current_period_end ? new Date(s.current_period_end).toLocaleDateString('fr-FR') : '';
+    $('#plan').innerHTML = `<b>Plan ${esc(s.plans?.name)}</b>${s.status === 'trial' ? 'Essai jusqu’au ' + end : 'Jusqu’à ' + s.plans?.max_employees + ' employés'}<button id="up">Mettre à niveau</button>`;
+    $('#up').onclick = () => toast('Les paiements en ligne arrivent bientôt');
+  });
+  show();
 }
-async function dash(el){
-  el.innerHTML = '<p>Chargement…</p>';
+function show(){
+  document.querySelectorAll('.sbn button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
+  $('#ttl').textContent = NAV.find(n => n[0] === tab)[1];
+  ({ dash, emp, me: () => myArea($('#v')) })[tab]();
+}
+function staffShell(){ setApp('<div id="v"></div>'); myArea($('#v')); }
+function chart(w){
+  if (!w.length) return '<p style="color:var(--mut)">Pas encore de données.</p>';
+  const vals = w.map(x => x.present + x.late), mx = Math.max(1, ...vals), n = vals.length;
+  const P = vals.map((v,i) => [40 + (n === 1 ? 250 : i * 520 / (n-1)), 170 - v / mx * 130]);
+  let d = `M${P[0][0]},${P[0][1]}`; for (let i = 1; i < n; i++) { const m = (P[i-1][0] + P[i][0]) / 2; d += ` C${m},${P[i-1][1]} ${m},${P[i][1]} ${P[i][0]},${P[i][1]}`; }
+  return `<svg viewBox="0 0 600 210" style="width:100%"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c4f94" stop-opacity=".25"/><stop offset="1" stop-color="#1c4f94" stop-opacity="0"/></linearGradient></defs>
+  ${[0,1,2].map(i => `<line x1="30" x2="580" y1="${40+i*65}" y2="${40+i*65}" stroke="#e6ebf2"/>`).join('')}
+  <path d="${d} L${P[n-1][0]},170 L${P[0][0]},170Z" fill="url(#g)"/><path d="${d}" fill="none" stroke="#1c4f94" stroke-width="3"/>
+  ${P.map((p,i) => `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="#fff" stroke="#1c4f94" stroke-width="2.5"><title>${vals[i]}</title></circle><text x="${p[0]}" y="196" text-anchor="middle" font-size="12" fill="#6b7a8d">${w[i].date.slice(8)}/${w[i].date.slice(5,7)}</text>`).join('')}</svg>`;
+}
+async function dash(){
+  const el = $('#v'); el.innerHTML = '<p>Chargement…</p>';
   const { data:d, error } = await sb.rpc('company_dashboard'); if (error) return fail(error);
-  const k = [['total_employees','Employés'],['active_employees','Actifs'],['absent_today','Absents aujourd’hui'],['late_today','Retards'],['on_leave_today','En congé'],['pending_leaves','Congés en attente'],['monthly_payroll','Masse salariale (FCFA)'],['new_hires_30d','Embauches (30 j)'],['open_positions','Postes ouverts'],['new_candidates','Nouveaux candidats']];
-  const w = d.attendance_7d || [], mx = Math.max(1, ...w.map(x => x.present + x.late));
-  el.innerHTML = `<div class="grid">${k.map(([key,l]) => `<div class="kpi"><small>${l}</small><b>${fmt(d[key])}</b></div>`).join('')}</div>
-  <div class="card" style="margin-top:14px"><h3>Présences (7 derniers jours)</h3><div class="bars">${w.map(x => `<div><i style="height:${Math.round((x.present+x.late)/mx*90)}px"></i>${x.date.slice(8)}</div>`).join('')}</div></div>
-  <div class="card"><h3>Effectifs par département</h3>${(d.headcount_by_department||[]).map(x => `<p style="margin:6px 0">${esc(x.department)} <span class="tag">${x.count}</span></p>`).join('') || '<p>Aucun employé.</p>'}</div>`;
+  const w = d.attendance_7d || [], today = w[w.length-1], pres = today && today.date === new Date().toISOString().slice(0,10) ? today.present : 0;
+  const K = [['👥','#e7efff','Total employés',d.total_employees],['✅','#dff3e9','Présents aujourd’hui',pres],['🌴','#fdeee0','En congé',d.on_leave_today],['⏰','#fde6e6','Retards aujourd’hui',d.late_today]];
+  const S = [['Absents aujourd’hui',d.absent_today],['Congés en attente',d.pending_leaves],['Embauches (30 j)',d.new_hires_30d],['Masse salariale (FCFA)',d.monthly_payroll]];
+  el.innerHTML = `<div class="grid">${K.map(([i,c,l,v]) => `<div class="kpi kp"><div class="ic" style="background:${c}">${i}</div><div><small>${l}</small><b>${fmt(v)}</b></div></div>`).join('')}</div>
+  <div class="two" style="margin-top:14px"><div class="card"><h3>Aperçu des présences</h3>${chart(w)}</div>
+  <div class="card qa"><h3>Actions rapides</h3><button id="q1">➕ Ajouter un employé</button><button id="q2">🔑 Inviter par code</button><button id="q3">🕘 Mon pointage</button></div></div>
+  <div class="grid">${S.map(([l,v]) => `<div class="kpi"><small>${l}</small><b style="font-size:20px">${fmt(v)}</b></div>`).join('')}</div>
+  <div class="card" style="margin-top:14px"><h3>Effectifs par département</h3>${(d.headcount_by_department||[]).map(x => `<p style="margin:6px 0">${esc(x.department)} <span class="tag">${x.count}</span></p>`).join('') || '<p>Aucun employé.</p>'}</div>`;
+  $('#q1').onclick = $('#q2').onclick = () => { tab = 'emp'; show(); }; $('#q3').onclick = () => { tab = 'me'; show(); };
 }
-async function emp(el){
-  el.innerHTML = '<p>Chargement…</p>';
-  const { data, error } = await sb.from('employees').select('id,employee_number,first_name,last_name,job_title,status,hire_date,profile_id').order('last_name'); if (error) return fail(error);
-  el.innerHTML = `<div id="iv"></div><form class="card" id="nf"><h3>Ajouter un employé</h3><div class="row">
+async function emp(){
+  const el = $('#v'); el.innerHTML = '<p>Chargement…</p>';
+  const [{ data, error }, { data:co }] = await Promise.all([
+    sb.from('employees').select('id,employee_number,first_name,last_name,job_title,email,profile_id,status').order('last_name'),
+    sb.from('companies').select('join_code').eq('id', me.company_id).single()]);
+  if (error) return fail(error);
+  el.innerHTML = `<div class="card"><h3>Donner accès à vos employés</h3>
+  <p style="color:var(--mut);font-size:14px">1) Ajoutez l’employé ci-dessous avec son e-mail. 2) Il ouvre l’application, choisit « Rejoindre » et saisit ce code, son e-mail et un mot de passe.</p>
+  <span class="code" id="cd">${esc(co?.join_code)}</span> <button class="alt" id="cp">Copier</button> <button class="alt" id="rg">Nouveau code</button></div>
+  <form class="card" id="nf"><h3>Ajouter un employé</h3><div class="row">
   <label>Prénom<input name="fn" required></label><label>Nom<input name="ln" required></label>
-  <label>Poste<input name="jt"></label><label>Date d’embauche<input name="hd" type="date" required value="${today()}"></label><button>Ajouter</button></div></form>
-  <div class="card wrap"><table><tr><th>N°</th><th>Nom</th><th>Poste</th><th>Statut</th><th>Accès employé</th></tr>
-  ${data.map(e => `<tr><td>${esc(e.employee_number)}</td><td>${esc(e.first_name)} ${esc(e.last_name)}</td><td>${esc(e.job_title)}</td><td><span class="tag">${ST[e.status] || e.status}</span></td>
-  <td>${e.profile_id ? '<span class="tag">Compte actif</span>' : e.status === 'terminated' ? '' : `<button class="alt" data-inv="${e.id}" data-n="${esc(e.first_name)}">Inviter</button>`}</td></tr>`).join('') || '<tr><td colspan="5">Aucun employé pour le moment.</td></tr>'}</table></div>`;
+  <label>E-mail<input name="em" type="email" required></label><label>Poste<input name="jt"></label>
+  <label>Date d’embauche<input name="hd" type="date" required value="${new Date().toISOString().slice(0,10)}"></label><button>Ajouter</button></div></form>
+  <div class="card wrap"><table><tr><th>N°</th><th>Nom</th><th>Poste</th><th>E-mail</th><th>Accès</th><th>Statut</th></tr>
+  ${data.map(e => `<tr><td>${esc(e.employee_number)}</td><td>${esc(e.first_name)} ${esc(e.last_name)}</td><td>${esc(e.job_title)}</td><td>${esc(e.email)}</td><td>${e.profile_id ? '<span class="tag ok">Compte actif</span>' : '<span class="tag">En attente</span>'}</td><td><span class="tag">${ST[e.status] || e.status}</span></td></tr>`).join('') || '<tr><td colspan="6">Aucun employé pour le moment.</td></tr>'}</table></div>`;
+  $('#cp').onclick = () => navigator.clipboard?.writeText(co.join_code).then(() => toast('Code copié'));
+  $('#rg').onclick = async () => { if (!confirm('L’ancien code ne fonctionnera plus. Continuer ?')) return; const r = await sb.rpc('regenerate_join_code'); r.error ? fail(r.error) : (toast('Nouveau code créé'), emp()); };
   $('#nf').onsubmit = async ev => {
     ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
-    const { error } = await sb.from('employees').insert({ company_id: me.company_id, first_name: f.fn, last_name: f.ln, job_title: f.jt || null, hire_date: f.hd });
-    error ? fail(error) : (toast('Employé ajouté'), emp(el));
+    const { error } = await sb.from('employees').insert({ company_id: me.company_id, first_name: f.fn, last_name: f.ln, email: f.em.trim().toLowerCase(), job_title: f.jt || null, hire_date: f.hd });
+    error ? fail(error) : (toast('Employé ajouté'), emp());
   };
-  document.querySelectorAll('[data-inv]').forEach(b => b.onclick = async () => {
-    const { data:code, error } = await sb.rpc('generate_invite', { p_employee: b.dataset.inv }); if (error) return fail(error);
-    const msg = `Bonjour ${b.dataset.n}, rejoignez votre espace RH sur ${location.href.split('#')[0]} : onglet « Rejoindre avec un code », code ${code}`;
-    $('#iv').innerHTML = `<div class="card inv"><h3>Code d’invitation pour ${esc(b.dataset.n)}</h3><b>${esc(code)}</b><p style="color:var(--mut)">À transmettre à l’employé. Il crée son compte avec ce code et accède à son profil, son pointage et ses congés.</p><button id="sh">Partager</button></div>`;
-    $('#sh').onclick = () => navigator.share ? navigator.share({ text: msg }) : navigator.clipboard.writeText(msg).then(() => toast('Message copié'));
-    scrollTo({ top: 0, behavior: 'smooth' });
-  });
 }
 
-/* ---------- Espace employé : profil, pointage, congés ---------- */
-async function space(el){
+/* ---------- espace de l’employé : profil et pointage ---------- */
+async function myArea(el){
   el.innerHTML = '<p>Chargement…</p>';
-  const { data:e } = await sb.from('employees').select('id,employee_number,first_name,last_name,job_title,hire_date,status,email,phone').eq('profile_id', me.id).maybeSingle();
-  if (!e) { el.innerHTML = '<div class="card"><h3>Mon espace</h3><p>Aucune fiche employé n’est liée à ce compte.</p></div>'; return; }
-  const [at, lt, lr] = await Promise.all([
-    sb.from('attendance').select('check_in,check_out,status').eq('employee_id', e.id).eq('work_date', today()).maybeSingle(),
-    sb.from('leave_types').select('id,name').order('name'),
-    sb.from('leave_requests').select('start_date,end_date,days,status,leave_type_id').eq('employee_id', e.id).order('start_date', { ascending: false }).limit(10)]);
-  const hm = t => t ? new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—';
-  const types = lt.data || [], tn = id => (types.find(t => t.id === id) || {}).name || '';
-  el.innerHTML = `<div class="card me"><h3>Mon profil</h3><p><b>${esc(e.first_name)} ${esc(e.last_name)}</b> <span class="tag">${ST[e.status] || ''}</span></p>
-  <p><small>Matricule</small> ${esc(e.employee_number)} &nbsp; <small>Poste</small> ${esc(e.job_title) || '—'} &nbsp; <small>Embauche</small> ${esc(e.hire_date)}</p></div>
-  <div class="card"><h3>Pointage du jour</h3><p>Arrivée : <b>${hm(at.data?.check_in)}</b> &nbsp; Départ : <b>${hm(at.data?.check_out)}</b> ${at.data?.status === 'late' ? '<span class="tag">Retard</span>' : ''}</p>
+  const { data:e } = await sb.from('employees').select('*').eq('profile_id', me.id).maybeSingle();
+  if (!e) return el.innerHTML = '<div class="card"><p>Aucune fiche employé n’est liée à votre compte.</p></div>';
+  const { data:at } = await sb.from('attendance').select('work_date,check_in,check_out,status').eq('employee_id', e.id).order('work_date', { ascending:false }).limit(7);
+  const ini = ((e.first_name||'')[0] || '') + ((e.last_name||'')[0] || '');
+  el.innerHTML = `<div class="card prof"><div class="avatar">${esc(ini.toUpperCase())}</div><div><h3>${esc(e.first_name)} ${esc(e.last_name)}</h3>
+  <p>${esc(e.job_title) || 'Poste non renseigné'} · ${esc(e.employee_number)}</p><p>Embauché le ${esc(e.hire_date)} · <span class="tag">${ST[e.status] || e.status}</span></p></div></div>
+  <div class="card"><h3>Pointage</h3><p style="color:var(--mut);font-size:14px">L’heure enregistrée est celle du serveur.</p>
   <div class="row"><button id="ci">Pointer mon arrivée</button><button id="co" class="alt">Pointer mon départ</button></div></div>
-  <form class="card" id="lf"><h3>Demander un congé</h3><div class="row"><label>Type<select name="t">${types.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select></label>
-  <label>Du<input name="s" type="date" required></label><label>Au<input name="e" type="date" required></label></div>
-  <label>Motif (facultatif)<input name="r"></label><button>Envoyer la demande</button></form>
-  <div class="card wrap"><h3>Mes demandes</h3><table><tr><th>Type</th><th>Du</th><th>Au</th><th>Jours</th><th>Statut</th></tr>
-  ${(lr.data || []).map(r => `<tr><td>${esc(tn(r.leave_type_id))}</td><td>${r.start_date}</td><td>${r.end_date}</td><td>${r.days}</td><td><span class="tag">${LV[r.status]}</span></td></tr>`).join('') || '<tr><td colspan="5">Aucune demande.</td></tr>'}</table></div>`;
-  const go = (fn, ok) => async () => { const { error } = await sb.rpc(fn); error ? fail(error) : (toast(ok), space(el)); };
+  <div class="card wrap"><h3>Mes derniers pointages</h3><table><tr><th>Date</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr>
+  ${(at||[]).map(a => `<tr><td>${esc(a.work_date)}</td><td>${hhmm(a.check_in)}</td><td>${hhmm(a.check_out)}</td><td><span class="tag">${AT[a.status] || a.status}</span></td></tr>`).join('') || '<tr><td colspan="4">Aucun pointage pour le moment.</td></tr>'}</table></div>`;
+  const go = (fn, ok) => async () => { const { error } = await sb.rpc(fn); error ? fail(error) : (toast(ok), myArea(el)); };
   $('#ci').onclick = go('check_in', 'Arrivée enregistrée'); $('#co').onclick = go('check_out', 'Départ enregistré');
-  $('#lf').onsubmit = async ev => {
-    ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
-    const { error } = await sb.from('leave_requests').insert({ company_id: me.company_id, employee_id: e.id, leave_type_id: f.t, start_date: f.s, end_date: f.e, reason: f.r || null });
-    error ? fail(error) : (toast('Demande envoyée'), space(el));
-  };
 }
 
-/* ---------- Super admin (back-office) ---------- */
+/* ---------- super admin ---------- */
 async function adminView(){
   setApp('<p>Chargement…</p>');
   const [s, l] = await Promise.all([sb.rpc('admin_dashboard_stats'), sb.rpc('admin_company_list')]);
