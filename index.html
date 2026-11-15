@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HR Manager Pro</title>
+<style>
+:root{--navy:#0b2545;--navy2:#13315c;--bg:#f3f5f8;--card:#fff;--line:#dde3ec;--txt:#1b2733;--mut:#6b7a8d;--ok:#1f8a5b;--bad:#c0392b}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+header{background:var(--navy);color:#fff;display:flex;align-items:center;gap:12px;padding:12px 16px;position:sticky;top:0;z-index:5}
+header b{font-size:18px;flex:1}header b span{color:#9db4d6;font-weight:500}
+#who{font-size:12px;color:#c5d3e8;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+button,.btn{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:10px 14px;font-size:15px;cursor:pointer}
+header button{background:#fff2;padding:7px 10px;font-size:13px}
+button.alt{background:#e8edf5;color:var(--navy)}button.danger{background:var(--bad)}button:disabled{opacity:.5}
+main{max-width:980px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.auth{max-width:420px;margin:24px auto}.auth h2{margin-top:0;color:var(--navy)}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0}
+input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:16px;margin-top:4px;background:#fff}
+.link{color:var(--navy2);text-align:center;cursor:pointer;text-decoration:underline;margin:14px 0 0}
+nav{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto}nav button{background:#e8edf5;color:var(--navy);white-space:nowrap}nav button.on{background:var(--navy);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.kpi small{color:var(--mut);display:block;font-size:12px}.kpi b{font-size:24px;color:var(--navy)}
+.wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--mut);font-weight:600;font-size:12px}
+.bars{display:flex;align-items:flex-end;gap:8px;height:110px;margin-top:8px}
+.bars div{flex:1;text-align:center;font-size:11px;color:var(--mut)}.bars i{display:block;background:var(--navy2);border-radius:4px 4px 0 0;min-height:2px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end}
+.tag{background:#e8edf5;color:var(--navy);border-radius:20px;padding:2px 9px;font-size:12px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ok);color:#fff;padding:11px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:.2s;max-width:90%;z-index:9}
+#toast.show{opacity:1}#toast.bad{background:var(--bad)}h3{margin:0 0 8px;color:var(--navy)}
+</style>
+</head>
+<body>
+<header><b>HR Manager <span>Pro</span></b><div id="who"></div><button id="out" hidden>Déconnexion</button></header>
+<main id="app"><p>Chargement…</p></main>
+<div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const sb = supabase.createClient('https://egxoglirjqnzkullsrez.supabase.co','sb_publishable_XnzmsUCYgpPclGJlQMYPJg_XjYFlEYh');
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => new Intl.NumberFormat('fr-FR').format(n ?? 0);
+const SUB = {trial:'Essai',active:'Actif',expired:'Expiré',suspended:'Suspendu',past_due:'Impayé',cancelled:'Annulé'};
+const ST = {active:'Actif',on_leave:'En congé',terminated:'Parti'};
+let me = null, mode = 'login', tab = 'dash';
+
+const setApp = h => $('#app').innerHTML = h;
+function toast(m, bad){ const t = $('#toast'); t.textContent = m; t.className = bad ? 'bad show' : 'show'; setTimeout(() => t.className = '', 4500); }
+const fail = e => toast(e?.message || 'Une erreur est survenue', true);
+const hr = () => me && ['company_admin','hr'].includes(me.role);
+
+async function init(){
+  const { data:{ session } } = await sb.auth.getSession();
+  session ? loadMe() : authView();
+}
+sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') { me = null; authView(); } });
+$('#out').onclick = () => sb.auth.signOut();
+
+function authView(){
+  $('#out').hidden = true; $('#who').textContent = '';
+  const su = mode === 'signup';
+  setApp(`<form class="card auth" id="f"><h2>${su ? 'Créer mon entreprise' : 'Connexion'}</h2>
+  ${su ? `<label>Nom de l’entreprise<input name="company" required minlength="2"></label>
+  <label>Votre nom complet<input name="name" required></label>
+  <label>Pays<select name="country"><option value="SN">Sénégal</option><option value="CI">Côte d’Ivoire</option><option value="ML">Mali</option><option value="BF">Burkina Faso</option><option value="GN">Guinée</option><option value="CM">Cameroun</option><option value="MA">Maroc</option><option value="FR">France</option></select></label>
+  <label>Langue<select name="lang"><option value="fr">Français</option><option value="en">English</option><option value="ar">العربية</option><option value="de">Deutsch</option></select></label>` : ''}
+  <label>E-mail<input name="email" type="email" required autocomplete="email"></label>
+  <label>Mot de passe<input name="pw" type="password" required minlength="8" autocomplete="${su ? 'new-password' : 'current-password'}"></label>
+  <button style="width:100%;margin-top:8px">${su ? 'Créer le compte' : 'Se connecter'}</button>
+  <p class="link" id="sw">${su ? 'J’ai déjà un compte' : 'Créer une entreprise'}</p></form>`);
+  $('#sw').onclick = () => { mode = su ? 'login' : 'signup'; authView(); };
+  $('#f').onsubmit = async e => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.target)), b = e.target.querySelector('button'); b.disabled = true;
+    if (su) {
+      const { data, error } = await sb.auth.signUp({ email: f.email, password: f.pw, options: { emailRedirectTo: location.href.split('#')[0], data: { company_name: f.company, full_name: f.name, country: f.country, language: f.lang } } });
+      b.disabled = false;
+      if (error) return fail(error);
+      if (data.session) loadMe(); else setApp('<div class="card auth"><h2>Vérifiez votre e-mail</h2><p>Un lien de confirmation vient d’être envoyé à <b>' + esc(f.email) + '</b>. Ouvrez-le, puis connectez-vous.</p></div>');
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email: f.email, password: f.pw });
+      b.disabled = false;
+      if (error) return fail(error);
+      loadMe();
+    }
+  };
+}
+
+async function loadMe(){
+  const { data:{ user } } = await sb.auth.getUser();
+  if (!user) return authView();
+  const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  if (error) return fail(error);
+  if (!data) { setApp('<div class="card auth"><h2>Compte sans entreprise</h2><p>Ce compte n’est rattaché à aucune entreprise.</p></div>'); $('#out').hidden = false; return; }
+  me = data; $('#out').hidden = false; $('#who').textContent = (me.full_name || me.email);
+  tab = 'dash';
+  me.role === 'super_admin' ? adminView() : hr() ? shell() : staffView();
+}
+
+/* ---------- Entreprise (RH / admin) ---------- */
+function shell(){
+  setApp(`<nav>${[['dash','Tableau de bord'],['emp','Employés'],['me','Mon pointage']].map(([k,l]) => `<button data-t="${k}" class="${tab===k?'on':''}">${l}</button>`).join('')}</nav><div id="v"></div>`);
+  document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.t; shell(); });
+  ({ dash, emp, me: staffView })[tab]($('#v'));
+}
+async function dash(){
+  const el = $('#v'); el.innerHTML = '<p>Chargement…</p>';
+  const { data:d, error } = await sb.rpc('company_dashboard'); if (error) return fail(error);
+  const k = [['total_employees','Employés'],['active_employees','Actifs'],['absent_today','Absents aujourd’hui'],['late_today','Retards'],['on_leave_today','En congé'],['pending_leaves','Congés en attente'],['monthly_payroll','Masse salariale (FCFA)'],['new_hires_30d','Embauches (30 j)'],['open_positions','Postes ouverts'],['new_candidates','Nouveaux candidats']];
+  const w = d.attendance_7d || [], mx = Math.max(1, ...w.map(x => x.present + x.late));
+  el.innerHTML = `<div class="grid">${k.map(([key,l]) => `<div class="kpi"><small>${l}</small><b>${fmt(d[key])}</b></div>`).join('')}</div>
+  <div class="card" style="margin-top:14px"><h3>Présences (7 derniers jours)</h3><div class="bars">${w.map(x => `<div><i style="height:${Math.round((x.present+x.late)/mx*90)}px"></i>${x.date.slice(8)}</div>`).join('')}</div></div>
+  <div class="card"><h3>Effectifs par département</h3>${(d.headcount_by_department||[]).map(x => `<p style="margin:6px 0">${esc(x.department)} <span class="tag">${x.count}</span></p>`).join('') || '<p>Aucun employé.</p>'}</div>`;
+}
+async function emp(){
+  const el = $('#v'); el.innerHTML = '<p>Chargement…</p>';
+  const { data, error } = await sb.from('employees').select('id,employee_number,first_name,last_name,job_title,status,hire_date').order('last_name'); if (error) return fail(error);
+  el.innerHTML = `<form class="card" id="nf"><h3>Ajouter un employé</h3><div class="row">
+  <label>Prénom<input name="fn" required></label><label>Nom<input name="ln" required></label>
+  <label>Poste<input name="jt"></label><label>Date d’embauche<input name="hd" type="date" required value="${new Date().toISOString().slice(0,10)}"></label>
+  <button>Ajouter</button></div></form>
+  <div class="card wrap"><table><tr><th>N°</th><th>Nom</th><th>Poste</th><th>Statut</th><th>Embauche</th></tr>
+  ${data.map(e => `<tr><td>${esc(e.employee_number)}</td><td>${esc(e.first_name)} ${esc(e.last_name)}</td><td>${esc(e.job_title)}</td><td><span class="tag">${ST[e.status] || e.status}</span></td><td>${esc(e.hire_date)}</td></tr>`).join('') || '<tr><td colspan="5">Aucun employé pour le moment.</td></tr>'}</table></div>`;
+  $('#nf').onsubmit = async ev => {
+    ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
+    const { error } = await sb.from('employees').insert({ company_id: me.company_id, first_name: f.fn, last_name: f.ln, job_title: f.jt || null, hire_date: f.hd });
+    if (error) return fail(error); toast('Employé ajouté'); emp();
+  };
+}
+
+/* ---------- Employé : pointage ---------- */
+function staffView(el){
+  const box = el || document.getElementById('app'); if (!el) $('#app').innerHTML = '<div id="v"></div>';
+  const t = el || $('#v');
+  t.innerHTML = `<div class="card"><h3>Mon pointage</h3><p style="color:var(--mut)">L’heure enregistrée est celle du serveur.</p>
+  <div class="row"><button id="ci">Pointer mon arrivée</button><button id="co" class="alt">Pointer mon départ</button></div></div>`;
+  const go = (fn, ok) => async () => { const { error } = await sb.rpc(fn); error ? fail(error) : toast(ok); };
+  $('#ci').onclick = go('check_in', 'Arrivée enregistrée'); $('#co').onclick = go('check_out', 'Départ enregistré');
+}
+
+/* ---------- Super admin (back-office) ---------- */
+async function adminView(){
+  setApp('<p>Chargement…</p>');
+  const [s, l] = await Promise.all([sb.rpc('admin_dashboard_stats'), sb.rpc('admin_company_list')]);
+  if (s.error) return fail(s.error); if (l.error) return fail(l.error);
+  const d = s.data, k = [['companies_total','Entreprises'],['companies_active','Actives'],['companies_suspended','Suspendues'],['new_companies_30d','Nouvelles (30 j)'],['employees_total','Employés (total)'],['mrr','Revenu mensuel récurrent (FCFA)'],['revenue_month','Encaissé ce mois'],['revenue_year','Encaissé cette année'],['open_tickets','Réclamations ouvertes']];
+  setApp(`<div class="grid">${k.map(([key,t]) => `<div class="kpi"><small>${t}</small><b>${fmt(d[key])}</b></div>`).join('')}</div>
+  <div class="card wrap" style="margin-top:14px"><h3>Entreprises inscrites</h3><table><tr><th>Entreprise</th><th>Pays</th><th>Plan</th><th>Abonnement</th><th>Employés</th><th>Admin</th><th></th></tr>
+  ${l.data.map(c => `<tr><td>${esc(c.name)}</td><td>${esc(c.country)}</td><td>${esc(c.plan_id)}</td><td><span class="tag">${SUB[c.subscription_status] || ''}</span></td><td>${c.employee_count}</td><td>${esc(c.admin_email)}</td>
+  <td><button class="${c.status==='active'?'danger':'alt'}" data-id="${c.id}" data-s="${c.status==='active'?'suspended':'active'}">${c.status==='active'?'Suspendre':'Réactiver'}</button></td></tr>`).join('') || '<tr><td colspan="7">Aucune entreprise.</td></tr>'}</table></div>`);
+  document.querySelectorAll('[data-id]').forEach(b => b.onclick = async () => {
+    if (b.dataset.s === 'suspended' && !confirm('Suspendre cette entreprise ?')) return;
+    const { error } = await sb.rpc('admin_set_company_status', { p_company: b.dataset.id, p_status: b.dataset.s });
+    error ? fail(error) : (toast('Statut mis à jour'), adminView());
+  });
+}
+init();
+</script>
+</body>
+</html>
