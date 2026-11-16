@@ -189,7 +189,7 @@ async function loadMe(){
 }
 
 /* ---------- entreprise (RH / admin) ---------- */
-const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘'],['leave','Congés','🌴'],['pay','Paie','💳'],['rec','Recrutement','📋'],['perf','Performance','📈',1],['rep','Rapports','📊',1],['set','Paramètres','⚙️',1],['sub','Abonnement','💎'],['me','Mon espace','👤'],['pw','Mot de passe','🔒']];
+const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘'],['leave','Congés','🌴'],['pay','Paie','💳'],['rec','Recrutement','📋'],['perf','Performance','📈',1],['rep','Rapports','📊',1],['set','Paramètres','⚙️'],['sub','Abonnement','💎'],['sup','Support','🎧'],['me','Mon espace','👤'],['pw','Mot de passe','🔒']];
 function shell(){
   document.body.className = 'hrapp';
   const ini = (me.full_name || me.email || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
@@ -212,7 +212,7 @@ function shell(){
 function show(){
   document.querySelectorAll('.sbn button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
   $('#ttl').textContent = NAV.find(n => n[0] === tab)[1];
-  ({ dash, emp, att, leave, pay, rec, sub, me: () => myArea($('#v')), pw: () => pwForm($('#v')) })[tab]();
+  ({ dash, emp, att, leave, pay, rec, sub, set: settings, sup: support, me: () => myArea($('#v')), pw: () => pwForm($('#v')) })[tab]();
 }
 function staffShell(){ setApp('<div id="v"></div>'); myArea($('#v')); }
 function chart(w){
@@ -486,6 +486,40 @@ async function sub(){
   if ($('#pf2')) $('#pf2').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
     const { error } = await sb.rpc('request_payment', { p_plan: sub.sel, p_provider: f.pv, p_reference: f.rf }); error ? fail(error) : (sub.sel = null, toast('Demande envoyée : votre abonnement sera activé après vérification'), sub()); };
 }
+/* ---------- paramètres et support ---------- */
+const ROLES = {employee:'Employé',hr:'RH',company_admin:'Administrateur',manager:'Manager'}, COUNTRIES = [['SN','Sénégal'],['CI','Côte d’Ivoire'],['ML','Mali'],['BF','Burkina Faso'],['GN','Guinée'],['CM','Cameroun'],['MA','Maroc'],['FR','France']];
+const TZ = ['Africa/Dakar','Africa/Abidjan','Africa/Bamako','Africa/Ouagadougou','Africa/Conakry','Africa/Douala','Africa/Casablanca','Europe/Paris'], LG = [['fr','Français'],['en','English'],['ar','العربية'],['de','Deutsch']];
+async function settings(){
+  const el = $('#v'), adm = me.role === 'company_admin', t = (adm && settings.t) || 'co';
+  const { data:c, error } = await sb.from('companies').select('*').eq('id', me.company_id).single(); if (error) return fail(error);
+  const o = (arr, sel) => arr.map(([v,l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${esc(l)}</option>`).join('');
+  let body;
+  if (t === 'co') body = `<form id="sf"><div class="row"><label>Nom de l’entreprise<input name="nm" value="${esc(c.name)}" required minlength="2" ${adm ? '' : 'disabled'}></label>
+    <label>Pays<select name="ct" ${adm ? '' : 'disabled'}>${o(COUNTRIES, c.country)}</select></label><label>Fuseau horaire<select name="tz" ${adm ? '' : 'disabled'}>${o(TZ.map(x => [x,x]), c.timezone)}</select></label>
+    <label>Langue par défaut<select name="lg" ${adm ? '' : 'disabled'}>${o(LG, c.default_language)}</select></label></div>
+    <p style="color:var(--mut);font-size:14px">Le pays détermine les règles de paie appliquées. Devise : ${esc(c.currency)}.</p>${adm ? '<button>Enregistrer</button>' : '<p style="color:var(--mut)">Seul l’administrateur peut modifier ces informations.</p>'}</form>`;
+  else { const { data:us } = await sb.from('profiles').select('id,full_name,email,role,is_active').order('full_name');
+    body = `<table><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Accès</th></tr>${(us || []).map(u => `<tr><td>${esc(u.full_name)}</td><td>${esc(u.email)}</td>
+    <td>${u.id === me.id ? '<span class="tag">' + ROLES[u.role] + ' (vous)</span>' : `<select data-r="${u.id}">${Object.entries(ROLES).map(([k,l]) => `<option value="${k}" ${k === u.role ? 'selected' : ''} ${k === 'manager' && u.role !== 'manager' ? 'disabled' : ''}>${l}${k === 'manager' ? ' (bientôt)' : ''}</option>`).join('')}</select>`}</td>
+    <td>${u.id === me.id ? '' : `<button class="${u.is_active ? 'danger' : 'alt'}" data-a="${u.id}" data-v="${u.is_active ? 'false' : 'true'}">${u.is_active ? 'Désactiver' : 'Réactiver'}</button>`}</td></tr>`).join('')}</table>
+    <p style="color:var(--mut);font-size:14px">Les employés rejoignent l’entreprise avec le code d’invitation. Ici, vous pouvez leur donner le rôle RH ou Administrateur, ou désactiver leur accès.</p>`; }
+  el.innerHTML = `<nav>${[['co','Entreprise'], ...(adm ? [['users','Utilisateurs']] : [])].map(([k,l]) => `<button data-t3="${k}" class="${t === k ? 'on' : ''}">${l}</button>`).join('')}</nav><div class="card wrap">${body}</div>`;
+  el.querySelectorAll('[data-t3]').forEach(b => b.onclick = () => { settings.t = b.dataset.t3; settings(); });
+  if ($('#sf') && adm) $('#sf').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
+    const { error } = await sb.from('companies').update({ name: f.nm.trim(), country: f.ct, timezone: f.tz, default_language: f.lg }).eq('id', me.company_id); error ? fail(error) : toast('Paramètres enregistrés'); };
+  el.querySelectorAll('[data-r]').forEach(b => b.onchange = async () => { const { error } = await sb.from('profiles').update({ role: b.value }).eq('id', b.dataset.r); error ? fail(error) : toast('Rôle mis à jour'); });
+  el.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => { const { error } = await sb.from('profiles').update({ is_active: b.dataset.v === 'true' }).eq('id', b.dataset.a); error ? fail(error) : (toast('Accès mis à jour'), settings()); });
+}
+const TS = {open:'Ouverte',in_progress:'En cours',resolved:'Résolue',closed:'Fermée'};
+async function support(){
+  const el = $('#v'), { data, error } = await sb.from('support_tickets').select('id,subject,message,status,priority,admin_response,created_at').order('created_at', {ascending:false}); if (error) return fail(error);
+  el.innerHTML = `<form class="card" id="tf"><h3>Contacter le support</h3><div class="row"><label>Sujet<input name="sj" required minlength="3" maxlength="200"></label><label>Priorité<select name="pr"><option value="normal">Normale</option><option value="high">Urgente</option><option value="low">Faible</option></select></label></div>
+  <label>Votre message<input name="ms" required></label><button>Envoyer</button></form>
+  ${(data || []).map(x => `<div class="card"><b>${esc(x.subject)}</b> <span class="tag ${x.status === 'resolved' ? 'ok' : 'warn'}">${TS[x.status]}</span><br><small style="color:var(--mut)">${new Date(x.created_at).toLocaleDateString('fr-FR')}</small><p style="margin:8px 0">${esc(x.message)}</p>
+  ${x.admin_response ? `<p style="background:#e7efff;padding:10px;border-radius:10px;margin:0"><b>Réponse du support :</b> ${esc(x.admin_response)}</p>` : ''}</div>`).join('') || '<p>Aucune demande pour le moment.</p>'}`;
+  $('#tf').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
+    const { error } = await sb.from('support_tickets').insert({ company_id: me.company_id, created_by: me.id, subject: f.sj, message: f.ms, priority: f.pr }); error ? fail(error) : (toast('Demande envoyée au support'), support()); };
+}
 /* ---------- espace de l’employé : profil et pointage ---------- */
 async function myArea(el){
   el.innerHTML = '<p>Chargement…</p>';
@@ -510,13 +544,15 @@ async function myArea(el){
 /* ---------- super admin ---------- */
 async function adminView(){
   setApp('<p>Chargement…</p>');
-  const [s, l, pp] = await Promise.all([sb.rpc('admin_dashboard_stats'), sb.rpc('admin_company_list'), sb.rpc('admin_pending_payments')]);
+  const [s, l, pp, tk] = await Promise.all([sb.rpc('admin_dashboard_stats'), sb.rpc('admin_company_list'), sb.rpc('admin_pending_payments'), sb.from('support_tickets').select('id,company_id,subject,message,created_at').in('status', ['open','in_progress']).order('created_at')]);
   if (s.error) return fail(s.error); if (l.error) return fail(l.error);
-  const d = s.data, k = [['companies_total','Entreprises'],['companies_active','Actives'],['companies_suspended','Suspendues'],['new_companies_30d','Nouvelles (30 j)'],['employees_total','Employés (total)'],['mrr','Revenu mensuel récurrent (FCFA)'],['revenue_month','Encaissé ce mois'],['revenue_year','Encaissé cette année'],['open_tickets','Réclamations ouvertes']];
+  const cn = Object.fromEntries((l.data || []).map(c => [c.id, c.name])), d = s.data, k = [['companies_total','Entreprises'],['companies_active','Actives'],['companies_suspended','Suspendues'],['new_companies_30d','Nouvelles (30 j)'],['employees_total','Employés (total)'],['mrr','Revenu mensuel récurrent (FCFA)'],['revenue_month','Encaissé ce mois'],['revenue_year','Encaissé cette année'],['open_tickets','Réclamations ouvertes']];
   setApp(`<div class="grid">${k.map(([key,t]) => `<div class="kpi"><small>${t}</small><b>${fmt(d[key])}</b></div>`).join('')}</div>
   <div class="card wrap" style="margin-top:14px"><h3>Paiements à vérifier ${pp.data?.length ? '<span class="tag warn">' + pp.data.length + '</span>' : ''}</h3><table><tr><th>Date</th><th>Entreprise</th><th>Formule</th><th>Montant</th><th>Moyen</th><th>Référence</th><th></th></tr>
   ${(pp.data || []).map(x => `<tr><td>${new Date(x.created_at).toLocaleDateString('fr-FR')}</td><td>${esc(x.company_name)}</td><td>${esc(x.plan_id)}</td><td>${fmt(x.amount)} ${esc(x.currency)}</td><td>${PM[x.provider] || esc(x.provider)}</td><td><b>${esc(x.provider_ref)}</b></td>
   <td><button data-ap="${x.id}">Confirmer</button> <button class="danger" data-rj="${x.id}">Refuser</button></td></tr>`).join('') || '<tr><td colspan="7">Aucun paiement en attente.</td></tr>'}</table></div>
+  <div class="card wrap" style="margin-top:14px"><h3>Réclamations ouvertes ${tk.data?.length ? '<span class="tag warn">' + tk.data.length + '</span>' : ''}</h3><table><tr><th>Date</th><th>Entreprise</th><th>Sujet</th><th>Message</th><th></th></tr>
+  ${(tk.data || []).map(x => `<tr><td>${new Date(x.created_at).toLocaleDateString('fr-FR')}</td><td>${esc(cn[x.company_id])}</td><td><b>${esc(x.subject)}</b></td><td style="white-space:normal;min-width:220px">${esc(x.message)}</td><td><button data-tk="${x.id}">Répondre</button></td></tr>`).join('') || '<tr><td colspan="5">Aucune réclamation.</td></tr>'}</table></div>
   <div class="card wrap" style="margin-top:14px"><h3>Entreprises inscrites</h3><table><tr><th>Entreprise</th><th>Pays</th><th>Plan</th><th>Abonnement</th><th>Employés</th><th>Admin</th><th></th></tr>
   ${l.data.map(c => `<tr><td>${esc(c.name)}</td><td>${esc(c.country)}</td><td>${esc(c.plan_id)}</td><td><span class="tag">${SUB[c.subscription_status] || ''}</span></td><td>${c.employee_count}</td><td>${esc(c.admin_email)}</td>
   <td><button class="${c.status==='active'?'danger':'alt'}" data-id="${c.id}" data-s="${c.status==='active'?'suspended':'active'}">${c.status==='active'?'Suspendre':'Réactiver'}</button></td></tr>`).join('') || '<tr><td colspan="7">Aucune entreprise.</td></tr>'}</table></div>`);
@@ -526,6 +562,7 @@ async function adminView(){
     error ? fail(error) : (toast('Statut mis à jour'), adminView());
   });
   const act = (sel, fn, ask, msg) => document.querySelectorAll(sel).forEach(b => b.onclick = async () => { if (!confirm(ask)) return; const { error } = await sb.rpc(fn, { p_payment: b.dataset.ap || b.dataset.rj }); error ? fail(error) : (toast(msg), adminView()); });
+  document.querySelectorAll('[data-tk]').forEach(b => b.onclick = async () => { const r = prompt('Votre réponse :'); if (!r) return; const { error } = await sb.rpc('admin_reply_ticket', { p_ticket: b.dataset.tk, p_status: 'resolved', p_response: r }); error ? fail(error) : (toast('Réponse envoyée'), adminView()); });
   act('[data-ap]', 'admin_approve_payment', 'Avez-vous bien reçu ce paiement sur votre compte Wave / Orange Money avec cette référence ?', 'Paiement confirmé : abonnement prolongé');
   act('[data-rj]', 'admin_reject_payment', 'Refuser ce paiement ?', 'Paiement refusé');
 }
