@@ -246,7 +246,7 @@ async function dash(){
 async function emp(){
   const el = $('#v'); el.innerHTML = '<p>Chargement…</p>';
   const [{ data, error }, { data:co }] = await Promise.all([
-    sb.from('employees').select('id,employee_number,first_name,last_name,job_title,email,profile_id,status').order('last_name'),
+    sb.from('employees').select('id,employee_number,first_name,last_name,job_title,email,phone,address,profile_id,status').order('last_name'),
     sb.from('companies').select('join_code').eq('id', me.company_id).single()]);
   if (error) return fail(error);
   el.innerHTML = `<div class="card"><h3>Donner accès à vos employés</h3>
@@ -256,8 +256,8 @@ async function emp(){
   <label>Prénom<input name="fn" required></label><label>Nom<input name="ln" required></label>
   <label>E-mail<input name="em" type="email" required></label><label>Poste<input name="jt"></label>
   <label>Date d’embauche<input name="hd" type="date" required value="${new Date().toISOString().slice(0,10)}"></label><button>Ajouter</button></div></form>
-  <input id="qs" placeholder="Rechercher un employé…" style="margin-bottom:10px"><div class="card wrap"><table id="et"><tr><th>N°</th><th>Nom</th><th>Poste</th><th>E-mail</th><th>Accès</th><th>Statut</th><th></th></tr>
-  ${data.map(e => `<tr><td>${esc(e.employee_number)}</td><td>${esc(e.first_name)} ${esc(e.last_name)}</td><td>${esc(e.job_title)}</td><td>${esc(e.email)}</td><td>${e.profile_id ? '<span class="tag ok">Compte actif</span>' : '<span class="tag">En attente</span>'}</td><td><span class="tag">${ST[e.status] || e.status}</span></td><td><button class="alt" data-v="${e.id}">Voir</button></td></tr>`).join('') || '<tr><td colspan="7">Aucun employé pour le moment.</td></tr>'}</table></div>`;
+  <input id="qs" placeholder="Rechercher un employé…" style="margin-bottom:10px"><div class="card wrap"><table id="et"><tr><th>N°</th><th>Nom</th><th>Poste</th><th>E-mail</th><th>Téléphone</th><th>Adresse</th><th>Accès</th><th>Statut</th><th></th></tr>
+  ${data.map(e => `<tr><td>${esc(e.employee_number)}</td><td>${esc(e.first_name)} ${esc(e.last_name)}</td><td>${esc(e.job_title)}</td><td>${esc(e.email)}</td><td>${esc(e.phone)}</td><td>${esc(e.address)}</td><td>${e.profile_id ? '<span class="tag ok">Compte actif</span>' : '<span class="tag">En attente</span>'}</td><td><span class="tag">${ST[e.status] || e.status}</span></td><td><button class="alt" data-v="${e.id}">Voir</button></td></tr>`).join('') || '<tr><td colspan="9">Aucun employé pour le moment.</td></tr>'}</table></div>`;
   document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => empView(b.dataset.v));
   $('#qs').oninput = ev => document.querySelectorAll('#et tr:not(:first-child)').forEach(r => r.hidden = !r.textContent.toLowerCase().includes(ev.target.value.toLowerCase()));
   $('#cp').onclick = () => navigator.clipboard?.writeText(co.join_code).then(() => toast('Code copié'));
@@ -331,12 +331,10 @@ async function empView(id, t = 'info'){
   const dn = Object.fromEntries((deps || []).map(d => [d.id, d.name])), ini = ((e.first_name || '')[0] || '') + ((e.last_name || '')[0] || '');
   const R = (l, v) => `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><small style="color:var(--mut)">${l}</small><div><b>${esc(v) || '—'}</b></div></div>`;
   const opts = (arr, sel, none) => (none ? `<option value="">${none}</option>` : '') + arr.map(([v,l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${esc(l)}</option>`).join('');
-  const body = { info: () => R('E-mail', e.email) + R('Téléphone', e.phone) + R('Date de naissance', e.birth_date) + R('Adresse', e.address) + R('Date d’embauche', e.hire_date),
+  const body = { info: () => R('E-mail', e.email) + R('Téléphone', e.phone || 'Non renseigné par l’employé') + R('Adresse', e.address || 'Non renseignée par l’employé') + R('Date d’embauche', e.hire_date),
     emp: () => R('Poste', e.job_title) + R('Département', dn[e.department_id]) + R('Type de contrat', CT[e.contract_type]) + R('Responsable direct', nm[e.manager_id]) + R('Numéro', e.employee_number) + R('Accès à l’application', e.profile_id ? 'Compte actif' : 'En attente d’inscription'),
     edit: () => `<form id="ef"><div class="row"><label>Prénom<input name="fn" value="${esc(e.first_name)}" required></label><label>Nom<input name="ln" value="${esc(e.last_name)}" required></label>
-      <label>E-mail<input name="em" type="email" value="${esc(e.email)}" ${e.profile_id ? 'disabled' : ''}></label><label>Téléphone<input name="ph" value="${esc(e.phone)}"></label>
-      <label>Naissance<input name="bd" type="date" value="${esc(e.birth_date)}"></label><label>Adresse<input name="ad" value="${esc(e.address)}"></label>
-      <label>Poste<input name="jt" value="${esc(e.job_title)}"></label><label>Département<select name="dp">${opts((deps || []).map(d => [d.id, d.name]), e.department_id, '—')}</select></label>
+      <label>E-mail<input name="em" type="email" value="${esc(e.email)}" ${e.profile_id ? 'disabled' : ''}></label>      <label>Poste<input name="jt" value="${esc(e.job_title)}"></label><label>Département<select name="dp">${opts((deps || []).map(d => [d.id, d.name]), e.department_id, '—')}</select></label>
       <label>Responsable<select name="mg">${opts(Object.entries(nm).filter(([k]) => k !== id), e.manager_id, '—')}</select></label>
       <label>Contrat<select name="ct">${opts(Object.entries(CT), e.contract_type)}</select></label></div>
       <p><button>Enregistrer</button> <button type="button" class="alt" id="nd">Nouveau département</button></p></form>`,
@@ -356,7 +354,7 @@ async function empView(id, t = 'info'){
   if (t === 'edit') {
     $('#nd').onclick = async () => { const n = prompt('Nom du département :'); if (!n) return; const { error } = await sb.from('departments').insert({ company_id: me.company_id, name: n.trim() }); error ? fail(error) : (toast('Département créé'), empView(id, 'edit')); };
     $('#ef').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
-      const u = { first_name: f.fn, last_name: f.ln, phone: f.ph || null, birth_date: f.bd || null, address: f.ad || null, job_title: f.jt || null, department_id: f.dp || null, manager_id: f.mg || null, contract_type: f.ct };
+      const u = { first_name: f.fn, last_name: f.ln, job_title: f.jt || null, department_id: f.dp || null, manager_id: f.mg || null, contract_type: f.ct };
       if (!e.profile_id && f.em) u.email = f.em.trim().toLowerCase();
       const { error } = await sb.from('employees').update(u).eq('id', id); error ? fail(error) : (toast('Profil mis à jour'), empView(id, 'info')); };
   }
@@ -497,10 +495,13 @@ async function myArea(el){
   const ini = ((e.first_name||'')[0] || '') + ((e.last_name||'')[0] || '');
   el.innerHTML = `<div class="card prof"><div class="avatar">${esc(ini.toUpperCase())}</div><div><h3>${esc(e.first_name)} ${esc(e.last_name)}</h3>
   <p>${esc(e.job_title) || 'Poste non renseigné'} · ${esc(e.employee_number)}</p><p>Embauché le ${esc(e.hire_date)} · <span class="tag">${ST[e.status] || e.status}</span></p></div></div>
+  <form class="card" id="cf3"><h3>Mes coordonnées</h3><p style="color:var(--mut);font-size:14px;margin:0">Visibles par votre RH et vos responsables. Vous seul pouvez les modifier.</p>
+  <div class="row"><label>Téléphone<input name="ph" type="tel" value="${esc(e.phone)}" placeholder="+221 77 123 45 67"></label><label>Adresse<input name="ad" value="${esc(e.address)}" placeholder="Quartier, ville"></label><button>Enregistrer</button></div></form>
   <div class="card"><h3>Pointage</h3><p style="color:var(--mut);font-size:14px">L’heure enregistrée est celle du serveur.</p>
   <div class="row"><button id="ci">Pointer mon arrivée</button><button id="co" class="alt">Pointer mon départ</button></div></div>
   <div class="card wrap"><h3>Mes derniers pointages</h3><table><tr><th>Date</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr>
   ${(at||[]).map(a => `<tr><td>${esc(a.work_date)}</td><td>${hhmm(a.check_in)}</td><td>${hhmm(a.check_out)}</td><td><span class="tag">${AT[a.status] || a.status}</span></td></tr>`).join('') || '<tr><td colspan="4">Aucun pointage pour le moment.</td></tr>'}</table></div>`;
+  $('#cf3').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target)); const { error } = await sb.rpc('update_my_contact', { p_phone: f.ph, p_address: f.ad }); error ? fail(error) : toast('Coordonnées enregistrées'); };
   el.insertAdjacentHTML('beforeend','<div id="lv"></div>'); leaveBox($('#lv'), e);
   const go = (fn, ok) => async () => { const { error } = await sb.rpc(fn); error ? fail(error) : (toast(ok), myArea(el)); };
   $('#ci').onclick = go('check_in', 'Arrivée enregistrée'); $('#co').onclick = go('check_out', 'Départ enregistré');
