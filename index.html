@@ -189,7 +189,7 @@ async function loadMe(){
 }
 
 /* ---------- entreprise (RH / admin) ---------- */
-const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘'],['leave','Congés','🌴'],['pay','Paie','💳'],['rec','Recrutement','📋'],['perf','Performance','📈',1],['rep','Rapports','📊',1],['set','Paramètres','⚙️',1],['me','Mon espace','👤'],['pw','Mot de passe','🔒']];
+const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘'],['leave','Congés','🌴'],['pay','Paie','💳'],['rec','Recrutement','📋'],['perf','Performance','📈',1],['rep','Rapports','📊',1],['set','Paramètres','⚙️',1],['sub','Abonnement','💎'],['me','Mon espace','👤'],['pw','Mot de passe','🔒']];
 function shell(){
   document.body.className = 'hrapp';
   const ini = (me.full_name || me.email || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
@@ -205,14 +205,14 @@ function shell(){
   sb.from('subscriptions').select('status,current_period_end,plans(name,max_employees)').maybeSingle().then(({ data:s }) => {
     if (!s) return; const end = s.current_period_end ? new Date(s.current_period_end).toLocaleDateString('fr-FR') : '';
     $('#plan').innerHTML = `<b>Plan ${esc(s.plans?.name)}</b>${s.status === 'trial' ? 'Essai jusqu’au ' + end : 'Jusqu’à ' + s.plans?.max_employees + ' employés'}<button id="up">Mettre à niveau</button>`;
-    $('#up').onclick = () => toast('Les paiements en ligne arrivent bientôt');
+    $('#up').onclick = () => { tab = 'sub'; document.getElementById('lay').classList.remove('open'); show(); };
   });
   show();
 }
 function show(){
   document.querySelectorAll('.sbn button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
   $('#ttl').textContent = NAV.find(n => n[0] === tab)[1];
-  ({ dash, emp, att, leave, pay, rec, me: () => myArea($('#v')), pw: () => pwForm($('#v')) })[tab]();
+  ({ dash, emp, att, leave, pay, rec, sub, me: () => myArea($('#v')), pw: () => pwForm($('#v')) })[tab]();
 }
 function staffShell(){ setApp('<div id="v"></div>'); myArea($('#v')); }
 function chart(w){
@@ -462,6 +462,32 @@ function recoveryView(){
   $('#pw').onsubmit = async e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)); if (f.a !== f.b) return toast('Les mots de passe ne correspondent pas', true);
     const { error } = await sb.auth.updateUser({ password: f.a }); if (error) return fail(error); toast('Mot de passe modifié'); inRecovery = false; history.replaceState(null, '', location.pathname); loadMe(); };
 }
+/* ---------- abonnement et paiements ---------- */
+const PAYNUM = '+221 774670979', PY = {pending:'En attente de vérification',succeeded:'Confirmé',failed:'Refusé',refunded:'Remboursé'}, PM = {wave:'Wave',orange_money:'Orange Money'};
+const FT = {payroll:'Gestion de la paie',recruitment:'Recrutement',performance:'Suivi des performances',advanced_reports:'Rapports avancés',priority_support:'Support prioritaire'};
+async function sub(){
+  const el = $('#v'), isAdm = me.role === 'company_admin';
+  const [{ data:s }, { data:pl }, { data:py }, { count }] = await Promise.all([sb.from('subscriptions').select('plan_id,status,current_period_end').maybeSingle(), sb.from('plans').select('*').order('sort_order'),
+    sb.from('payments').select('id,plan_id,amount,currency,provider,provider_ref,status,created_at').order('created_at', {ascending:false}).limit(10), sb.from('employees').select('id', {count:'exact', head:true}).neq('status', 'terminated')]);
+  const cur = (pl || []).find(p => p.id === s?.plan_id), sel = (pl || []).find(p => p.id === sub.sel), end = s?.current_period_end ? new Date(s.current_period_end).toLocaleDateString('fr-FR') : '—';
+  el.innerHTML = `<div class="card"><h3>Mon abonnement</h3><p style="margin:4px 0"><b style="font-size:20px">${esc(cur?.name)}</b> <span class="tag ${s?.status === 'active' ? 'ok' : 'warn'}">${SUB[s?.status] || ''}</span></p>
+  <p style="margin:4px 0;color:var(--mut)">${fmt(count)} employé(s) sur ${cur?.max_employees ?? '—'} · ${s?.status === 'trial' ? 'Essai jusqu’au' : 'Valable jusqu’au'} ${end}</p></div>
+  <div class="grid">${(pl || []).map(p => `<div class="card" style="margin:0;${p.id === s?.plan_id ? 'border:2px solid var(--navy2)' : ''}"><h3>${esc(p.name)}</h3><p style="margin:2px 0"><b style="font-size:22px">${fmt(p.price_monthly)}</b> FCFA / mois</p>
+  <p style="color:var(--mut);margin:4px 0 8px">Jusqu’à ${p.max_employees} employés</p><ul style="padding-left:18px;margin:0 0 12px;font-size:14px"><li>Employés, présences et congés</li>${Object.entries(FT).filter(([k]) => p.features[k]).map(([k,l]) => `<li>${l}</li>`).join('')}</ul>
+  <button data-p="${p.id}" ${isAdm ? '' : 'disabled'}>${p.id === s?.plan_id ? 'Renouveler' : 'Choisir'}</button></div>`).join('')}</div>
+  ${isAdm ? '' : '<p style="color:var(--mut)">Seul l’administrateur de l’entreprise peut changer de formule.</p>'}
+  ${sel ? `<form class="card" id="pf2" style="margin-top:14px"><h3>Payer la formule ${esc(sel.name)}</h3>
+  <p>1) Envoyez <b>${fmt(sel.price_monthly)} FCFA</b> par <b>Wave</b> ou <b>Orange Money</b> au <span class="code" style="font-size:18px;letter-spacing:.05em">${PAYNUM}</span> <button type="button" class="alt" id="cn">Copier le numéro</button></p>
+  <p>2) Saisissez ci-dessous la <b>référence de la transaction</b> reçue par SMS.</p><div class="row"><label>Moyen utilisé<select name="pv"><option value="wave">Wave</option><option value="orange_money">Orange Money</option></select></label>
+  <label>Référence de la transaction<input name="rf" required minlength="4" maxlength="60"></label><button>Envoyer ma demande</button></div>
+  <p style="color:var(--mut);font-size:13px">Votre abonnement est activé dès que le paiement est vérifié.</p></form>` : ''}
+  <div class="card wrap" style="margin-top:14px"><h3>Historique des paiements</h3><table><tr><th>Date</th><th>Formule</th><th>Montant</th><th>Moyen</th><th>Référence</th><th>Statut</th></tr>
+  ${(py || []).map(x => `<tr><td>${new Date(x.created_at).toLocaleDateString('fr-FR')}</td><td>${esc(x.plan_id)}</td><td>${fmt(x.amount)} ${esc(x.currency)}</td><td>${PM[x.provider] || esc(x.provider)}</td><td>${esc(x.provider_ref)}</td><td><span class="tag ${x.status === 'succeeded' ? 'ok' : x.status === 'failed' ? 'bad' : 'warn'}">${PY[x.status] || x.status}</span></td></tr>`).join('') || '<tr><td colspan="6">Aucun paiement.</td></tr>'}</table></div>`;
+  el.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { sub.sel = b.dataset.p; sub(); });
+  if ($('#cn')) $('#cn').onclick = () => navigator.clipboard?.writeText(PAYNUM).then(() => toast('Numéro copié'));
+  if ($('#pf2')) $('#pf2').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
+    const { error } = await sb.rpc('request_payment', { p_plan: sub.sel, p_provider: f.pv, p_reference: f.rf }); error ? fail(error) : (sub.sel = null, toast('Demande envoyée : votre abonnement sera activé après vérification'), sub()); };
+}
 /* ---------- espace de l’employé : profil et pointage ---------- */
 async function myArea(el){
   el.innerHTML = '<p>Chargement…</p>';
@@ -483,10 +509,13 @@ async function myArea(el){
 /* ---------- super admin ---------- */
 async function adminView(){
   setApp('<p>Chargement…</p>');
-  const [s, l] = await Promise.all([sb.rpc('admin_dashboard_stats'), sb.rpc('admin_company_list')]);
+  const [s, l, pp] = await Promise.all([sb.rpc('admin_dashboard_stats'), sb.rpc('admin_company_list'), sb.rpc('admin_pending_payments')]);
   if (s.error) return fail(s.error); if (l.error) return fail(l.error);
   const d = s.data, k = [['companies_total','Entreprises'],['companies_active','Actives'],['companies_suspended','Suspendues'],['new_companies_30d','Nouvelles (30 j)'],['employees_total','Employés (total)'],['mrr','Revenu mensuel récurrent (FCFA)'],['revenue_month','Encaissé ce mois'],['revenue_year','Encaissé cette année'],['open_tickets','Réclamations ouvertes']];
   setApp(`<div class="grid">${k.map(([key,t]) => `<div class="kpi"><small>${t}</small><b>${fmt(d[key])}</b></div>`).join('')}</div>
+  <div class="card wrap" style="margin-top:14px"><h3>Paiements à vérifier ${pp.data?.length ? '<span class="tag warn">' + pp.data.length + '</span>' : ''}</h3><table><tr><th>Date</th><th>Entreprise</th><th>Formule</th><th>Montant</th><th>Moyen</th><th>Référence</th><th></th></tr>
+  ${(pp.data || []).map(x => `<tr><td>${new Date(x.created_at).toLocaleDateString('fr-FR')}</td><td>${esc(x.company_name)}</td><td>${esc(x.plan_id)}</td><td>${fmt(x.amount)} ${esc(x.currency)}</td><td>${PM[x.provider] || esc(x.provider)}</td><td><b>${esc(x.provider_ref)}</b></td>
+  <td><button data-ap="${x.id}">Confirmer</button> <button class="danger" data-rj="${x.id}">Refuser</button></td></tr>`).join('') || '<tr><td colspan="7">Aucun paiement en attente.</td></tr>'}</table></div>
   <div class="card wrap" style="margin-top:14px"><h3>Entreprises inscrites</h3><table><tr><th>Entreprise</th><th>Pays</th><th>Plan</th><th>Abonnement</th><th>Employés</th><th>Admin</th><th></th></tr>
   ${l.data.map(c => `<tr><td>${esc(c.name)}</td><td>${esc(c.country)}</td><td>${esc(c.plan_id)}</td><td><span class="tag">${SUB[c.subscription_status] || ''}</span></td><td>${c.employee_count}</td><td>${esc(c.admin_email)}</td>
   <td><button class="${c.status==='active'?'danger':'alt'}" data-id="${c.id}" data-s="${c.status==='active'?'suspended':'active'}">${c.status==='active'?'Suspendre':'Réactiver'}</button></td></tr>`).join('') || '<tr><td colspan="7">Aucune entreprise.</td></tr>'}</table></div>`);
@@ -495,6 +524,9 @@ async function adminView(){
     const { error } = await sb.rpc('admin_set_company_status', { p_company: b.dataset.id, p_status: b.dataset.s });
     error ? fail(error) : (toast('Statut mis à jour'), adminView());
   });
+  const act = (sel, fn, ask, msg) => document.querySelectorAll(sel).forEach(b => b.onclick = async () => { if (!confirm(ask)) return; const { error } = await sb.rpc(fn, { p_payment: b.dataset.ap || b.dataset.rj }); error ? fail(error) : (toast(msg), adminView()); });
+  act('[data-ap]', 'admin_approve_payment', 'Avez-vous bien reçu ce paiement sur votre compte Wave / Orange Money avec cette référence ?', 'Paiement confirmé : abonnement prolongé');
+  act('[data-rj]', 'admin_reject_payment', 'Refuser ce paiement ?', 'Paiement refusé');
 }
 init();
 </script>
