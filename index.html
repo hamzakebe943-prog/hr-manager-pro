@@ -189,7 +189,7 @@ async function loadMe(){
 }
 
 /* ---------- entreprise (RH / admin) ---------- */
-const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘'],['leave','Congés','🌴'],['pay','Paie','💳'],['rec','Recrutement','📋'],['perf','Performance','📈'],['rep','Rapports','📊'],['set','Paramètres','⚙️'],['sub','Abonnement','💎'],['sup','Support','🎧'],['me','Mon espace','👤'],['pw','Mot de passe','🔒']];
+const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘'],['leave','Congés','🌴'],['pay','Paie','💳'],['rec','Recrutement','📋'],['perf','Performance','📈'],['rep','Rapports','📊'],['set','Paramètres','⚙️'],['sub','Abonnement','💎'],['sup','Support','🎧'],['prof','Mon profil','🪪'],['me','Mon espace','👤'],['pw','Mot de passe','🔒']];
 function shell(){
   document.body.className = 'hrapp';
   const ini = (me.full_name || me.email || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
@@ -212,9 +212,12 @@ function shell(){
 function show(){
   document.querySelectorAll('.sbn button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
   $('#ttl').textContent = NAV.find(n => n[0] === tab)[1];
-  ({ dash, emp, att, leave, pay, rec, sub, perf, rep: reports, set: settings, sup: support, me: () => myArea($('#v')), pw: () => pwForm($('#v')) })[tab]();
+  ({ dash, emp, att, leave, pay, rec, sub, perf, rep: reports, set: settings, sup: support, prof: () => profile($('#v')), me: () => myArea($('#v')), pw: () => pwForm($('#v')) })[tab]();
 }
-function staffShell(){ setApp('<div id="v"></div>'); myArea($('#v')); }
+function staffShell(t = 'me'){
+  setApp(`<nav>${[['me','Mon espace'],['prof','Mon profil']].map(([k,l]) => `<button data-s="${k}" class="${t === k ? 'on' : ''}">${l}</button>`).join('')}</nav><div id="v"></div>`);
+  document.querySelectorAll('nav button').forEach(b => b.onclick = () => staffShell(b.dataset.s)); (t === 'me' ? myArea : profile)($('#v'));
+}
 function chart(w){
   if (!w.length) return '<p style="color:var(--mut)">Pas encore de données.</p>';
   const vals = w.map(x => x.present + x.late), mx = Math.max(1, ...vals), n = vals.length;
@@ -342,8 +345,8 @@ async function empView(id, t = 'info'){
       <label>Statut cadre<select name="ex"><option value="false">Non</option><option value="true" ${pp?.is_executive ? 'selected' : ''}>Oui</option></select></label>
       <label>Parts fiscales<input name="tp" type="number" min="1" max="10" step="0.5" value="${pp?.tax_parts ?? 1}"></label>
       <label>Mode de paiement<select name="pm">${opts([['bank','Virement'],['cash','Espèces'],['wave','Wave'],['orange_money','Orange Money'],['other','Autre']], pp?.payment_method || 'bank')}</select></label></div><p><button>Enregistrer</button></p></form>`,
-    docs: () => `<form id="df" class="row"><label>Type<select name="ty">${opts(Object.entries(DT), 'other')}</select></label><label>Titre<input name="ti" required></label><label>Fichier (PDF ou image, 10 Mo max)<input name="fl" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" required></label><button>Envoyer</button></form>
-      <table style="margin-top:10px"><tr><th>Type</th><th>Titre</th><th>Ajouté le</th><th></th></tr>${(docs || []).map(d => `<tr><td>${DT[d.doc_type]}</td><td>${esc(d.title)}</td><td>${new Date(d.created_at).toLocaleDateString('fr-FR')}</td><td><button class="alt" data-o="${d.id}">Ouvrir</button> <button class="danger" data-x="${d.id}">Supprimer</button></td></tr>`).join('') || '<tr><td colspan="4">Aucun document.</td></tr>'}</table>` }[t]();
+    docs: () => `<p style="color:var(--mut);font-size:14px;margin:0 0 8px">Ces documents sont ajoutés par l’employé depuis sa page « Mon profil ». Vous pouvez les consulter.</p>
+      <table style="margin-top:10px"><tr><th>Type</th><th>Titre</th><th>Ajouté le</th><th></th></tr>${(docs || []).map(d => `<tr><td>${DT[d.doc_type]}</td><td>${esc(d.title)}</td><td>${new Date(d.created_at).toLocaleDateString('fr-FR')}</td><td><button class="alt" data-o="${d.id}">Ouvrir</button> </td></tr>`).join('') || '<tr><td colspan="4">Aucun document.</td></tr>'}</table>` }[t]();
   el.innerHTML = `<button class="alt" id="bk" style="margin-bottom:14px">← Retour aux employés</button><div class="two" style="grid-template-columns:1fr 2fr">
   <div class="card" style="text-align:center"><div class="avatar" style="margin:0 auto 10px;width:84px;height:84px;font-size:30px">${esc(ini.toUpperCase())}</div><h3>${esc(e.first_name)} ${esc(e.last_name)}</h3>
   <p><span class="tag ${e.status === 'active' ? 'ok' : ''}">${ST[e.status] || e.status}</span></p><p style="margin:4px 0">${esc(e.job_title) || 'Poste non renseigné'}</p><p style="margin:4px 0;color:var(--mut)">${esc(dn[e.department_id]) || ''}</p>
@@ -362,16 +365,8 @@ async function empView(id, t = 'info'){
     const { error } = await sb.from('employee_payroll_profiles').upsert({ employee_id: id, company_id: me.company_id, base_salary: +f.bs, is_executive: f.ex === 'true', tax_parts: +f.tp, payment_method: f.pm });
     error ? fail(error) : toast('Profil de paie enregistré'); };
   if (t === 'docs') {
-    $('#df').onsubmit = async ev => { ev.preventDefault(); const f = new FormData(ev.target), file = f.get('fl');
-      if (file.size > 10485760) return toast('Fichier trop lourd (10 Mo max)', true);
-      const path = `${me.company_id}/${id}/${Date.now()}-${file.name.replace(/[^\w.\-]/g, '_')}`;
-      const up = await sb.storage.from('employee-docs').upload(path, file); if (up.error) return fail(up.error);
-      const { error } = await sb.from('employee_documents').insert({ company_id: me.company_id, employee_id: id, doc_type: f.get('ty'), title: f.get('ti'), storage_path: path, uploaded_by: me.id });
-      error ? fail(error) : (toast('Document ajouté'), empView(id, 'docs')); };
     el.querySelectorAll('[data-o]').forEach(b => b.onclick = async () => { const d = docs.find(x => x.id === b.dataset.o), r = await sb.storage.from('employee-docs').createSignedUrl(d.storage_path, 60);
       r.error ? fail(r.error) : (window.open(r.data.signedUrl, '_blank') || (location.href = r.data.signedUrl)); });
-    el.querySelectorAll('[data-x]').forEach(b => b.onclick = async () => { if (!confirm('Supprimer ce document ?')) return; const d = docs.find(x => x.id === b.dataset.x);
-      await sb.storage.from('employee-docs').remove([d.storage_path]); const { error } = await sb.from('employee_documents').delete().eq('id', d.id); error ? fail(error) : (toast('Document supprimé'), empView(id, 'docs')); });
   }
 }
 /* ---------- paie ---------- */
@@ -587,6 +582,30 @@ async function reports(){
   $('#x2').onclick = async () => { const m = now.toISOString().slice(0,7), [{ data:a }, nm] = await Promise.all([sb.from('attendance').select('employee_id,work_date,check_in,check_out,status').gte('work_date', m + '-01').order('work_date'), names()]);
     csv('presences-' + m + '.csv', [['Date','Employé','Arrivée','Départ','Statut'], ...(a || []).map(x => [x.work_date, nm[x.employee_id], hhmm(x.check_in), hhmm(x.check_out), AT[x.status]])]); };
 }
+/* ---------- mon profil : coordonnées et documents (page de l’employé) ---------- */
+async function profile(el){
+  el.innerHTML = '<p>Chargement…</p>';
+  const { data:e } = await sb.from('employees').select('*').eq('profile_id', me.id).maybeSingle();
+  if (!e) return el.innerHTML = '<div class="card"><p>Aucune fiche employé n’est liée à votre compte.</p></div>';
+  const { data:docs } = await sb.from('employee_documents').select('id,doc_type,title,storage_path,created_at').eq('employee_id', e.id).order('created_at', {ascending:false});
+  const ini = ((e.first_name || '')[0] || '') + ((e.last_name || '')[0] || '');
+  el.innerHTML = `<div class="card prof"><div class="avatar">${esc(ini.toUpperCase())}</div><div><h3>${esc(e.first_name)} ${esc(e.last_name)}</h3><p>${esc(e.job_title) || 'Poste non renseigné'} · ${esc(e.employee_number)}</p><p>${esc(e.email)} · Embauché le ${esc(e.hire_date)}</p></div></div>
+  <form class="card" id="cf3"><h3>Mes coordonnées</h3><p style="color:var(--mut);font-size:14px;margin:0">Visibles par votre RH. Vous seul pouvez les modifier.</p>
+  <div class="row"><label>Téléphone<input name="ph" type="tel" value="${esc(e.phone)}" placeholder="+221 77 123 45 67"></label><label>Adresse<input name="ad" value="${esc(e.address)}" placeholder="Quartier, ville"></label><button>Enregistrer</button></div></form>
+  <div class="card"><h3>Mes documents</h3><p style="color:var(--mut);font-size:14px;margin:0 0 8px">Visibles par votre RH. Vous seul pouvez les ajouter ou les supprimer (PDF ou image, 10 Mo maximum).</p>
+  <form id="df2" class="row"><label>Type<select name="ty">${Object.entries(DT).map(([k,l]) => `<option value="${k}" ${k === 'other' ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label>Titre<input name="ti" required></label>
+  <label>Fichier<input name="fl" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" required></label><button>Ajouter</button></form>
+  <div class="wrap"><table style="margin-top:10px"><tr><th>Type</th><th>Titre</th><th>Ajouté le</th><th></th></tr>${(docs || []).map(d => `<tr><td>${DT[d.doc_type]}</td><td>${esc(d.title)}</td><td>${new Date(d.created_at).toLocaleDateString('fr-FR')}</td><td><button class="alt" data-o="${d.id}">Ouvrir</button> <button class="danger" data-x="${d.id}">Supprimer</button></td></tr>`).join('') || '<tr><td colspan="4">Aucun document.</td></tr>'}</table></div></div>`;
+  $('#cf3').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target)); const { error } = await sb.rpc('update_my_contact', { p_phone: f.ph, p_address: f.ad }); error ? fail(error) : toast('Coordonnées enregistrées'); };
+  $('#df2').onsubmit = async ev => { ev.preventDefault(); const f = new FormData(ev.target), file = f.get('fl');
+    if (file.size > 10485760) return toast('Fichier trop lourd (10 Mo max)', true);
+    const path = `${me.company_id}/${e.id}/${Date.now()}-${file.name.replace(/[^\w.\-]/g, '_')}`, up = await sb.storage.from('employee-docs').upload(path, file); if (up.error) return fail(up.error);
+    const { error } = await sb.from('employee_documents').insert({ company_id: me.company_id, employee_id: e.id, doc_type: f.get('ty'), title: f.get('ti'), storage_path: path, uploaded_by: me.id });
+    error ? fail(error) : (toast('Document ajouté'), profile(el)); };
+  el.querySelectorAll('[data-o]').forEach(b => b.onclick = async () => { const d = docs.find(x => x.id === b.dataset.o), r = await sb.storage.from('employee-docs').createSignedUrl(d.storage_path, 60); r.error ? fail(r.error) : (window.open(r.data.signedUrl, '_blank') || (location.href = r.data.signedUrl)); });
+  el.querySelectorAll('[data-x]').forEach(b => b.onclick = async () => { if (!confirm('Supprimer ce document ?')) return; const d = docs.find(x => x.id === b.dataset.x);
+    await sb.storage.from('employee-docs').remove([d.storage_path]); const { error } = await sb.from('employee_documents').delete().eq('id', d.id); error ? fail(error) : (toast('Document supprimé'), profile(el)); });
+}
 /* ---------- espace de l’employé : profil et pointage ---------- */
 async function myArea(el){
   el.innerHTML = '<p>Chargement…</p>';
@@ -596,13 +615,10 @@ async function myArea(el){
   const ini = ((e.first_name||'')[0] || '') + ((e.last_name||'')[0] || '');
   el.innerHTML = `<div class="card prof"><div class="avatar">${esc(ini.toUpperCase())}</div><div><h3>${esc(e.first_name)} ${esc(e.last_name)}</h3>
   <p>${esc(e.job_title) || 'Poste non renseigné'} · ${esc(e.employee_number)}</p><p>Embauché le ${esc(e.hire_date)} · <span class="tag">${ST[e.status] || e.status}</span></p></div></div>
-  <form class="card" id="cf3"><h3>Mes coordonnées</h3><p style="color:var(--mut);font-size:14px;margin:0">Visibles par votre RH et vos responsables. Vous seul pouvez les modifier.</p>
-  <div class="row"><label>Téléphone<input name="ph" type="tel" value="${esc(e.phone)}" placeholder="+221 77 123 45 67"></label><label>Adresse<input name="ad" value="${esc(e.address)}" placeholder="Quartier, ville"></label><button>Enregistrer</button></div></form>
   <div class="card"><h3>Pointage</h3><p style="color:var(--mut);font-size:14px">L’heure enregistrée est celle du serveur.</p>
   <div class="row"><button id="ci">Pointer mon arrivée</button><button id="co" class="alt">Pointer mon départ</button></div></div>
   <div class="card wrap"><h3>Mes derniers pointages</h3><table><tr><th>Date</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr>
   ${(at||[]).map(a => `<tr><td>${esc(a.work_date)}</td><td>${hhmm(a.check_in)}</td><td>${hhmm(a.check_out)}</td><td><span class="tag">${AT[a.status] || a.status}</span></td></tr>`).join('') || '<tr><td colspan="4">Aucun pointage pour le moment.</td></tr>'}</table></div>`;
-  $('#cf3').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target)); const { error } = await sb.rpc('update_my_contact', { p_phone: f.ph, p_address: f.ad }); error ? fail(error) : toast('Coordonnées enregistrées'); };
   el.insertAdjacentHTML('beforeend','<div id="lv"></div>'); leaveBox($('#lv'), e); el.insertAdjacentHTML('beforeend','<div id="pfb"></div>'); perfBox($('#pfb'), e);
   const go = (fn, ok) => async () => { const { error } = await sb.rpc(fn); error ? fail(error) : (toast(ok), myArea(el)); };
   $('#ci').onclick = go('check_in', 'Arrivée enregistrée'); $('#co').onclick = go('check_out', 'Départ enregistré');
