@@ -189,7 +189,7 @@ async function loadMe(){
 }
 
 /* ---------- entreprise (RH / admin) ---------- */
-const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘'],['leave','Congés','🌴'],['pay','Paie','💳'],['rec','Recrutement','📋'],['perf','Performance','📈',1],['rep','Rapports','📊',1],['set','Paramètres','⚙️'],['sub','Abonnement','💎'],['sup','Support','🎧'],['me','Mon espace','👤'],['pw','Mot de passe','🔒']];
+const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘'],['leave','Congés','🌴'],['pay','Paie','💳'],['rec','Recrutement','📋'],['perf','Performance','📈'],['rep','Rapports','📊'],['set','Paramètres','⚙️'],['sub','Abonnement','💎'],['sup','Support','🎧'],['me','Mon espace','👤'],['pw','Mot de passe','🔒']];
 function shell(){
   document.body.className = 'hrapp';
   const ini = (me.full_name || me.email || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
@@ -212,7 +212,7 @@ function shell(){
 function show(){
   document.querySelectorAll('.sbn button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
   $('#ttl').textContent = NAV.find(n => n[0] === tab)[1];
-  ({ dash, emp, att, leave, pay, rec, sub, set: settings, sup: support, me: () => myArea($('#v')), pw: () => pwForm($('#v')) })[tab]();
+  ({ dash, emp, att, leave, pay, rec, sub, perf, rep: reports, set: settings, sup: support, me: () => myArea($('#v')), pw: () => pwForm($('#v')) })[tab]();
 }
 function staffShell(){ setApp('<div id="v"></div>'); myArea($('#v')); }
 function chart(w){
@@ -520,6 +520,73 @@ async function support(){
   $('#tf').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
     const { error } = await sb.from('support_tickets').insert({ company_id: me.company_id, created_by: me.id, subject: f.sj, message: f.ms, priority: f.pr }); error ? fail(error) : (toast('Demande envoyée au support'), support()); };
 }
+/* ---------- performance et rapports ---------- */
+const GS = {not_started:'À démarrer',in_progress:'En cours',achieved:'Atteint',missed:'Manqué'}, RS = {draft:'Brouillon',submitted:'Publiée',acknowledged:'Confirmée'}, SC = [['productivity_score','Productivité'],['quality_score','Qualité'],['teamwork_score','Travail d’équipe'],['initiative_score','Initiative']];
+const pct = v => v == null ? '—' : Math.round(v / 5 * 100) + ' %', sel5 = (n, v) => `<select name="${n}">${[1,2,3,4,5].map(i => `<option value="${i}" ${+v === i ? 'selected' : ''}>${i} ★</option>`).join('')}</select>`;
+function csv(name, rows){ const u = URL.createObjectURL(new Blob(['\ufeff' + rows.map(r => r.map(x => '"' + String(x ?? '').replace(/"/g,'""') + '"').join(';')).join('\n')], {type:'text/csv'})); const a = document.createElement('a'); a.href = u; a.download = name; a.click(); }
+function line(vals, labels){
+  if (!vals.length) return '<p style="color:var(--mut)">Pas encore de données.</p>';
+  const n = vals.length, mx = Math.max(1, ...vals), P = vals.map((v,i) => [40 + (n === 1 ? 250 : i * 520 / (n-1)), 170 - v / mx * 130]);
+  let d = `M${P[0][0]},${P[0][1]}`; for (let i = 1; i < n; i++) { const m = (P[i-1][0] + P[i][0]) / 2; d += ` C${m},${P[i-1][1]} ${m},${P[i][1]} ${P[i][0]},${P[i][1]}`; }
+  return `<svg viewBox="0 0 600 210" style="width:100%"><path d="${d}" fill="none" stroke="#1c4f94" stroke-width="3"/>${P.map((p,i) => `<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="#fff" stroke="#1c4f94" stroke-width="2.5"><title>${vals[i]}</title></circle><text x="${p[0]}" y="196" text-anchor="middle" font-size="12" fill="#6b7a8d">${esc(labels[i])}</text>`).join('')}</svg>`;
+}
+async function perf(){
+  const el = $('#v'), { data:cy, error } = await sb.from('review_cycles').select('*').order('start_date', {ascending:false}); if (error) return fail(error);
+  const cid = cy.find(c => c.id === perf.c) ? perf.c : cy[0]?.id; perf.c = cid;
+  const [{ data:rp }, { data:rv }] = await Promise.all([cid ? sb.rpc('performance_report', { p_cycle: cid }) : { data:[] }, sb.from('performance_reviews').select('cycle_id,overall_score').in('status', ['submitted','acknowledged'])]);
+  const avg = a => a.length ? a.reduce((x,y) => x + +y, 0) / a.length : null, cur = avg((rv || []).filter(r => r.cycle_id === cid).map(r => r.overall_score)), asc = [...cy].reverse();
+  const tv = asc.map(c => avg((rv || []).filter(r => r.cycle_id === c.id).map(r => r.overall_score))), gt = (rp || []).reduce((s,r) => s + +r.goals_total, 0), ga = (rp || []).reduce((s,r) => s + +r.goals_achieved, 0);
+  el.innerHTML = `<form class="card" id="yf"><h3>Nouveau cycle d’évaluation</h3><div class="row"><label>Nom<input name="nm" required placeholder="Ex. 1er semestre 2026"></label><label>Début<input name="a" type="date" required></label><label>Fin<input name="b" type="date" required></label><button>Créer</button></div></form>
+  ${cid ? `<div class="row" style="margin-bottom:14px"><label>Cycle<select id="cs">${cy.map(c => `<option value="${c.id}" ${c.id === cid ? 'selected' : ''}>${esc(c.name)}${c.status === 'closed' ? ' (clos)' : ''}</option>`).join('')}</select></label>${cy.find(c => c.id === cid).status === 'open' ? '<button class="alt" id="cc">Clôturer ce cycle</button>' : ''}</div>` : '<p>Créez un premier cycle pour commencer.</p>'}
+  ${kpis([['📈','#e7efff','Performance globale',cur == null ? 0 : Math.round(cur / 5 * 100)],['🎯','#dff3e9','Objectifs atteints',ga],['📝','#fdeee0','Objectifs au total',gt]])}
+  <div class="card" style="margin-top:14px"><h3>Évolution par cycle (%)</h3>${line(tv.map(v => v == null ? 0 : Math.round(v / 5 * 100)), asc.map(c => c.name.slice(0,10)))}</div>
+  <div class="card wrap"><h3>Équipe</h3><table><tr><th>Employé</th><th>Département</th><th>Objectifs</th><th>Progression</th><th>Note</th><th>Évaluation</th><th></th></tr>
+  ${(rp || []).map(r => `<tr><td>${esc(r.employee_name)}</td><td>${esc(r.department)}</td><td>${r.goals_achieved}/${r.goals_total}</td><td>${r.avg_goal_progress == null ? '—' : r.avg_goal_progress + ' %'}</td><td>${pct(r.overall_score)}</td><td>${r.review_status ? '<span class="tag">' + RS[r.review_status] + '</span>' : '—'}</td><td><button class="alt" data-e="${r.employee_id}" data-n="${esc(r.employee_name)}">Détails</button></td></tr>`).join('') || '<tr><td colspan="7">Aucun employé.</td></tr>'}</table></div><div id="pd"></div>`;
+  $('#yf').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target)); const { error } = await sb.from('review_cycles').insert({ company_id: me.company_id, name: f.nm, start_date: f.a, end_date: f.b }); error ? fail(error) : (toast('Cycle créé'), perf()); };
+  if ($('#cs')) $('#cs').onchange = e => { perf.c = e.target.value; perf(); };
+  if ($('#cc')) $('#cc').onclick = async () => { if (!confirm('Après clôture, les évaluations ne pourront plus être modifiées. Continuer ?')) return; const { error } = await sb.from('review_cycles').update({ status: 'closed' }).eq('id', cid); error ? fail(error) : (toast('Cycle clôturé'), perf()); };
+  el.querySelectorAll('[data-e]').forEach(b => b.onclick = () => perfEmp(b.dataset.e, b.dataset.n));
+}
+async function perfEmp(id, name){
+  const box = $('#pd'), cid = perf.c;
+  const [{ data:gs }, { data:rv }] = await Promise.all([sb.from('goals').select('*').eq('employee_id', id).eq('cycle_id', cid).order('created_at'), sb.from('performance_reviews').select('*').eq('employee_id', id).eq('cycle_id', cid).maybeSingle()]);
+  const ro = rv?.status === 'acknowledged';
+  box.innerHTML = `<div class="card"><h3>${esc(name)}</h3><div class="wrap"><table><tr><th>Objectif</th><th>Avancement</th><th>Statut</th><th></th></tr>${(gs || []).map(g => `<tr><td>${esc(g.title)}<br><small>${esc(g.due_date) || ''}</small></td><td>${fmt(g.current_value)} / ${g.target_value == null ? '—' : fmt(g.target_value)} ${esc(g.unit)}</td><td><span class="tag ${g.status === 'achieved' ? 'ok' : ''}">${GS[g.status]}</span></td><td><button class="alt" data-g="${g.id}" data-t="${g.target_value ?? ''}">Mettre à jour</button></td></tr>`).join('') || '<tr><td colspan="4">Aucun objectif pour ce cycle.</td></tr>'}</table></div>
+  <form id="gf"><div class="row"><label>Nouvel objectif<input name="ti" required minlength="3"></label><label>Cible<input name="tg" type="number" step="any" min="0"></label><label>Unité<input name="un" placeholder="ex. ventes"></label><label>Échéance<input name="du" type="date"></label><button>Ajouter</button></div></form></div>
+  <form class="card" id="rf"><h3>Évaluation ${rv ? '<span class="tag">' + RS[rv.status] + '</span>' : ''}</h3>${ro ? '<p style="color:var(--mut)">Confirmée par l’employé : elle ne peut plus être modifiée.</p>' : ''}<div class="row">${SC.map(([k,l]) => `<label>${l}${sel5(k, rv?.[k] ?? 3)}</label>`).join('')}</div>
+  <label>Commentaire du responsable<input name="mc" value="${esc(rv?.manager_comment)}"></label>${rv?.employee_comment ? `<p style="background:#e7efff;padding:10px;border-radius:10px"><b>Commentaire de l’employé :</b> ${esc(rv.employee_comment)}</p>` : ''}
+  ${ro ? '' : '<button name="st" value="draft" class="alt">Enregistrer le brouillon</button> <button name="st" value="submitted">Publier à l’employé</button>'}</form>`;
+  box.scrollIntoView({ behavior:'smooth' });
+  $('#gf').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target)); const { error } = await sb.from('goals').insert({ company_id: me.company_id, employee_id: id, cycle_id: cid, title: f.ti, target_value: f.tg === '' ? null : +f.tg, unit: f.un || null, due_date: f.du || null }); error ? fail(error) : (toast('Objectif ajouté'), perfEmp(id, name)); };
+  box.querySelectorAll('[data-g]').forEach(b => b.onclick = async () => { const v = prompt('Valeur actuelle :'); if (v === null || isNaN(+v)) return; const t = b.dataset.t;
+    const { error } = await sb.rpc('update_goal_progress', { p_goal: b.dataset.g, p_current: +v, p_status: t !== '' && +v >= +t ? 'achieved' : 'in_progress' }); error ? fail(error) : (toast('Objectif mis à jour'), perfEmp(id, name)); });
+  $('#rf').onsubmit = async ev => { ev.preventDefault(); if (ro) return; const f = Object.fromEntries(new FormData(ev.target)), st = ev.submitter?.value || 'draft';
+    const row = { company_id: me.company_id, employee_id: id, cycle_id: cid, manager_comment: f.mc || null, status: st }; SC.forEach(([k]) => row[k] = +f[k]);
+    const r = rv ? await sb.from('performance_reviews').update(row).eq('id', rv.id) : await sb.from('performance_reviews').insert(row); r.error ? fail(r.error) : (toast(st === 'submitted' ? 'Évaluation publiée' : 'Brouillon enregistré'), perf()); };
+}
+async function perfBox(el, e){
+  const [{ data:gs }, { data:rv }, { data:cy }] = await Promise.all([sb.from('goals').select('*').eq('employee_id', e.id).order('created_at', {ascending:false}), sb.from('performance_reviews').select('*').eq('employee_id', e.id).order('created_at', {ascending:false}), sb.from('review_cycles').select('id,name')]);
+  const cn = Object.fromEntries((cy || []).map(c => [c.id, c.name]));
+  el.innerHTML = `<h3 style="margin:18px 0 8px">Mes objectifs et évaluations</h3><div class="card wrap"><table><tr><th>Objectif</th><th>Avancement</th><th>Statut</th><th></th></tr>${(gs || []).map(g => `<tr><td>${esc(g.title)}</td><td>${fmt(g.current_value)} / ${g.target_value == null ? '—' : fmt(g.target_value)} ${esc(g.unit)}</td><td><span class="tag ${g.status === 'achieved' ? 'ok' : ''}">${GS[g.status]}</span></td><td><button class="alt" data-g="${g.id}" data-t="${g.target_value ?? ''}">Mettre à jour</button></td></tr>`).join('') || '<tr><td colspan="4">Aucun objectif.</td></tr>'}</table></div>
+  ${(rv || []).map(r => `<div class="card"><b>${esc(cn[r.cycle_id])}</b> <span class="tag">${RS[r.status]}</span> · Note : <b>${pct(r.overall_score)}</b><p style="margin:6px 0">${SC.map(([k,l]) => l + ' : ' + r[k] + '/5').join(' · ')}</p>${r.manager_comment ? '<p style="margin:6px 0"><b>Commentaire :</b> ' + esc(r.manager_comment) + '</p>' : ''}${r.status === 'submitted' ? `<button data-a="${r.id}">Confirmer et commenter</button>` : r.employee_comment ? '<p style="margin:6px 0"><b>Votre commentaire :</b> ' + esc(r.employee_comment) + '</p>' : ''}</div>`).join('')}`;
+  el.querySelectorAll('[data-g]').forEach(b => b.onclick = async () => { const v = prompt('Valeur actuelle :'); if (v === null || isNaN(+v)) return; const t = b.dataset.t;
+    const { error } = await sb.rpc('update_goal_progress', { p_goal: b.dataset.g, p_current: +v, p_status: t !== '' && +v >= +t ? 'achieved' : 'in_progress' }); error ? fail(error) : (toast('Progression enregistrée'), perfBox(el, e)); });
+  el.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => { const c = prompt('Votre commentaire (facultatif) :'); if (c === null) return; const { error } = await sb.rpc('acknowledge_review', { p_review: b.dataset.a, p_comment: c || null }); error ? fail(error) : (toast('Évaluation confirmée'), perfBox(el, e)); });
+}
+async function reports(){
+  const el = $('#v'), [{ data:es, error }, { data:ds }] = await Promise.all([sb.from('employees').select('employee_number,first_name,last_name,job_title,email,phone,address,hire_date,termination_date,status,department_id,contract_type').order('last_name'), sb.from('departments').select('id,name')]); if (error) return fail(error);
+  const dn = Object.fromEntries((ds || []).map(d => [d.id, d.name])), iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`, now = new Date();
+  const ms = [...Array(12)].map((_, i) => new Date(now.getFullYear(), now.getMonth() - 10 + i, 0)), vals = ms.map(d => es.filter(e => e.hire_date <= iso(d) && (!e.termination_date || e.termination_date > iso(d))).length), mx = Math.max(1, ...vals);
+  const act = es.filter(e => e.status !== 'terminated'), g = {}; act.forEach(e => { const k = dn[e.department_id] || 'Sans département'; g[k] = (g[k] || 0) + 1; });
+  const COL = ['#1c4f94','#1f9d4d','#f08a24','#8e5bd9','#d9534f','#17a2b8','#6b7a8d'], C = 2 * Math.PI * 60; let off = 0;
+  const arcs = Object.entries(g).map(([k,v], i) => { const l = v / act.length * C, s = `<circle r="60" cx="80" cy="80" fill="none" stroke="${COL[i % 7]}" stroke-width="26" stroke-dasharray="${l} ${C - l}" stroke-dashoffset="${-off}" transform="rotate(-90 80 80)"/>`; off += l; return s; }).join('');
+  el.innerHTML = `<div class="two"><div class="card"><h3>Évolution des effectifs (12 mois)</h3><div class="bars">${vals.map((v,i) => `<div><i style="height:${Math.round(v / mx * 90)}px"></i>${ms[i].toLocaleDateString('fr-FR', {month:'short'})}</div>`).join('')}</div></div>
+  <div class="card"><h3>Répartition par département</h3>${act.length ? `<svg viewBox="0 0 160 160" style="width:150px;display:block;margin:auto">${arcs}</svg>` : '<p>Aucun employé.</p>'}${Object.entries(g).map(([k,v], i) => `<p style="margin:4px 0"><span style="color:${COL[i % 7]}">●</span> ${esc(k)} <b>${Math.round(v / act.length * 100)} %</b> (${v})</p>`).join('')}</div></div>
+  <div class="card"><h3>Exports (CSV)</h3><button id="x1">Liste des employés</button> <button id="x2" class="alt">Présences du mois</button></div>`;
+  $('#x1').onclick = () => csv('employes.csv', [['N°','Prénom','Nom','Poste','Département','Contrat','E-mail','Téléphone','Adresse','Embauche','Statut'], ...es.map(e => [e.employee_number, e.first_name, e.last_name, e.job_title, dn[e.department_id], CT[e.contract_type], e.email, e.phone, e.address, e.hire_date, ST[e.status]])]);
+  $('#x2').onclick = async () => { const m = now.toISOString().slice(0,7), [{ data:a }, nm] = await Promise.all([sb.from('attendance').select('employee_id,work_date,check_in,check_out,status').gte('work_date', m + '-01').order('work_date'), names()]);
+    csv('presences-' + m + '.csv', [['Date','Employé','Arrivée','Départ','Statut'], ...(a || []).map(x => [x.work_date, nm[x.employee_id], hhmm(x.check_in), hhmm(x.check_out), AT[x.status]])]); };
+}
 /* ---------- espace de l’employé : profil et pointage ---------- */
 async function myArea(el){
   el.innerHTML = '<p>Chargement…</p>';
@@ -536,7 +603,7 @@ async function myArea(el){
   <div class="card wrap"><h3>Mes derniers pointages</h3><table><tr><th>Date</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr>
   ${(at||[]).map(a => `<tr><td>${esc(a.work_date)}</td><td>${hhmm(a.check_in)}</td><td>${hhmm(a.check_out)}</td><td><span class="tag">${AT[a.status] || a.status}</span></td></tr>`).join('') || '<tr><td colspan="4">Aucun pointage pour le moment.</td></tr>'}</table></div>`;
   $('#cf3').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target)); const { error } = await sb.rpc('update_my_contact', { p_phone: f.ph, p_address: f.ad }); error ? fail(error) : toast('Coordonnées enregistrées'); };
-  el.insertAdjacentHTML('beforeend','<div id="lv"></div>'); leaveBox($('#lv'), e);
+  el.insertAdjacentHTML('beforeend','<div id="lv"></div>'); leaveBox($('#lv'), e); el.insertAdjacentHTML('beforeend','<div id="pfb"></div>'); perfBox($('#pfb'), e);
   const go = (fn, ok) => async () => { const { error } = await sb.rpc(fn); error ? fail(error) : (toast(ok), myArea(el)); };
   $('#ci').onclick = go('check_in', 'Arrivée enregistrée'); $('#co').onclick = go('check_out', 'Départ enregistré');
 }
