@@ -87,7 +87,9 @@ body.hrapp header{display:none}body.hrapp main{max-width:none;padding:0}
 .kp{display:flex;gap:12px;align-items:center}.ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:22px}
 .two{display:grid;grid-template-columns:2fr 1fr;gap:14px}.qa button{width:100%;margin-bottom:10px;background:#eef3fb;color:var(--navy2);text-align:left}
 @media(max-width:860px){.lay{grid-template-columns:1fr}#sb{position:fixed;z-index:30;left:0;top:0;width:262px;transform:translateX(-105%);transition:.25s}.lay.open #sb{transform:none}.lay.open .scrim{display:block;position:fixed;inset:0;background:#0007;z-index:20}.bg{display:block}.uc div:last-child{display:none}.pad{padding:14px}.two{grid-template-columns:1fr}}
-.tag.warn{background:#fdeee0;color:#b9640c}.tag.bad{background:#fde6e6;color:var(--bad)}td button{padding:6px 10px;font-size:13px}.link{color:var(--navy2);text-align:center;cursor:pointer;text-decoration:underline;margin:14px 0 0}td select{padding:6px;font-size:13px;margin:0}</style>
+.tag.warn{background:#fdeee0;color:#b9640c}.tag.bad{background:#fde6e6;color:var(--bad)}td button{padding:6px 10px;font-size:13px}.link{color:var(--navy2);text-align:center;cursor:pointer;text-decoration:underline;margin:14px 0 0}td select{padding:6px;font-size:13px;margin:0}#sb.dark{background:linear-gradient(180deg,#0f3170,#0b2545);border-right:0}#sb.dark .sbl{color:#fff}#sb.dark .sbl span{color:#9db4d6}#sb.dark .sbn button{color:#c5d3e8}#sb.dark .sbn button:hover{background:#ffffff14}#sb.dark .sbn button.on{background:#1f6bff;color:#fff}#sb.dark .lo{background:#ffffff1f;color:#fff}
+.two3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.two3 .card{margin:0}@media(max-width:1000px){.two3{grid-template-columns:1fr}}
+</style>
 </head>
 <body class="auth">
 <div id="intro"><button class="skip" id="skip">Passer</button><div class="light"></div><div class="door l"></div><div class="door r"></div>
@@ -625,29 +627,80 @@ async function myArea(el){
 }
 
 /* ---------- super admin ---------- */
-async function adminView(){
-  setApp('<p>Chargement…</p>');
-  const [s, l, pp, tk] = await Promise.all([sb.rpc('admin_dashboard_stats'), sb.rpc('admin_company_list'), sb.rpc('admin_pending_payments'), sb.from('support_tickets').select('id,company_id,subject,message,created_at').in('status', ['open','in_progress']).order('created_at')]);
-  if (s.error) return fail(s.error); if (l.error) return fail(l.error);
-  const cn = Object.fromEntries((l.data || []).map(c => [c.id, c.name])), d = s.data, k = [['companies_total','Entreprises'],['companies_active','Actives'],['companies_suspended','Suspendues'],['new_companies_30d','Nouvelles (30 j)'],['employees_total','Employés (total)'],['mrr','Revenu mensuel récurrent (FCFA)'],['revenue_month','Encaissé ce mois'],['revenue_year','Encaissé cette année'],['open_tickets','Réclamations ouvertes']];
-  setApp(`<div class="grid">${k.map(([key,t]) => `<div class="kpi"><small>${t}</small><b>${fmt(d[key])}</b></div>`).join('')}</div>
-  <div class="card wrap" style="margin-top:14px"><h3>Paiements à vérifier ${pp.data?.length ? '<span class="tag warn">' + pp.data.length + '</span>' : ''}</h3><table><tr><th>Date</th><th>Entreprise</th><th>Formule</th><th>Montant</th><th>Moyen</th><th>Référence</th><th></th></tr>
-  ${(pp.data || []).map(x => `<tr><td>${new Date(x.created_at).toLocaleDateString('fr-FR')}</td><td>${esc(x.company_name)}</td><td>${esc(x.plan_id)}</td><td>${fmt(x.amount)} ${esc(x.currency)}</td><td>${PM[x.provider] || esc(x.provider)}</td><td><b>${esc(x.provider_ref)}</b></td>
-  <td><button data-ap="${x.id}">Confirmer</button> <button class="danger" data-rj="${x.id}">Refuser</button></td></tr>`).join('') || '<tr><td colspan="7">Aucun paiement en attente.</td></tr>'}</table></div>
-  <div class="card wrap" style="margin-top:14px"><h3>Réclamations ouvertes ${tk.data?.length ? '<span class="tag warn">' + tk.data.length + '</span>' : ''}</h3><table><tr><th>Date</th><th>Entreprise</th><th>Sujet</th><th>Message</th><th></th></tr>
-  ${(tk.data || []).map(x => `<tr><td>${new Date(x.created_at).toLocaleDateString('fr-FR')}</td><td>${esc(cn[x.company_id])}</td><td><b>${esc(x.subject)}</b></td><td style="white-space:normal;min-width:220px">${esc(x.message)}</td><td><button data-tk="${x.id}">Répondre</button></td></tr>`).join('') || '<tr><td colspan="5">Aucune réclamation.</td></tr>'}</table></div>
-  <div class="card wrap" style="margin-top:14px"><h3>Entreprises inscrites</h3><table><tr><th>Entreprise</th><th>Pays</th><th>Plan</th><th>Abonnement</th><th>Employés</th><th>Admin</th><th></th></tr>
-  ${l.data.map(c => `<tr><td>${esc(c.name)}</td><td>${esc(c.country)}</td><td>${esc(c.plan_id)}</td><td><span class="tag">${SUB[c.subscription_status] || ''}</span></td><td>${c.employee_count}</td><td>${esc(c.admin_email)}</td>
-  <td><button class="${c.status==='active'?'danger':'alt'}" data-id="${c.id}" data-s="${c.status==='active'?'suspended':'active'}">${c.status==='active'?'Suspendre':'Réactiver'}</button></td></tr>`).join('') || '<tr><td colspan="7">Aucune entreprise.</td></tr>'}</table></div>`);
-  document.querySelectorAll('[data-id]').forEach(b => b.onclick = async () => {
-    if (b.dataset.s === 'suspended' && !confirm('Suspendre cette entreprise ?')) return;
-    const { error } = await sb.rpc('admin_set_company_status', { p_company: b.dataset.id, p_status: b.dataset.s });
-    error ? fail(error) : (toast('Statut mis à jour'), adminView());
-  });
-  const act = (sel, fn, ask, msg) => document.querySelectorAll(sel).forEach(b => b.onclick = async () => { if (!confirm(ask)) return; const { error } = await sb.rpc(fn, { p_payment: b.dataset.ap || b.dataset.rj }); error ? fail(error) : (toast(msg), adminView()); });
-  document.querySelectorAll('[data-tk]').forEach(b => b.onclick = async () => { const r = prompt('Votre réponse :'); if (!r) return; const { error } = await sb.rpc('admin_reply_ticket', { p_ticket: b.dataset.tk, p_status: 'resolved', p_response: r }); error ? fail(error) : (toast('Réponse envoyée'), adminView()); });
-  act('[data-ap]', 'admin_approve_payment', 'Avez-vous bien reçu ce paiement sur votre compte Wave / Orange Money avec cette référence ?', 'Paiement confirmé : abonnement prolongé');
-  act('[data-rj]', 'admin_reject_payment', 'Refuser ce paiement ?', 'Paiement refusé');
+/* ---------- super admin : tableau de bord et back-office ---------- */
+const ANAV = [['dash','Tableau de bord','🏠'],['cos','Entreprises','🏢'],['pays','Paiements','💳'],['plans','Plans et tarifs','💎'],['tk','Support','🎧'],['pw','Mot de passe','🔒']];
+const ACT = {'company.registered':['🏢','Nouvelle entreprise inscrite'],'payment.requested':['💳','Paiement déclaré'],'admin.company_status':['🛡️','Statut d’entreprise modifié'],'admin.subscription_changed':['💎','Abonnement modifié'],'admin.company_deleted':['🗑️','Entreprise supprimée'],'insert.employees':['👤','Nouvel employé ajouté'],'insert.leave_requests':['🏖️','Demande de congé'],'insert.candidates':['📋','Nouveau candidat']};
+const SCOL = {active:'#1f6bff',trial:'#f08a24',expired:'#c3cad5',suspended:'#d9534f',past_due:'#e0b100',cancelled:'#6b7a8d'}, atab_ = { t:'dash' };
+const ago = t => { const m = Math.round((Date.now() - new Date(t)) / 60000); return m < 1 ? 'à l’instant' : m < 60 ? 'il y a ' + m + ' min' : m < 1440 ? 'il y a ' + Math.round(m / 60) + ' h' : 'il y a ' + Math.round(m / 1440) + ' j'; };
+function donut(g, col, label){
+  const tot = Object.values(g).reduce((a, b) => a + b, 0) || 1, C = 2 * Math.PI * 60; let off = 0;
+  return `<svg viewBox="0 0 160 160" style="width:150px">${Object.entries(g).map(([k,v]) => { const l = v / tot * C, s = `<circle r="60" cx="80" cy="80" fill="none" stroke="${col[k] || '#999'}" stroke-width="26" stroke-dasharray="${l} ${C - l}" stroke-dashoffset="${-off}" transform="rotate(-90 80 80)"/>`; off += l; return s; }).join('')}
+  <text x="80" y="82" text-anchor="middle" font-size="28" font-weight="700" fill="#0b2545">${Object.values(g).reduce((a, b) => a + b, 0)}</text><text x="80" y="100" text-anchor="middle" font-size="11" fill="#6b7a8d">${label}</text></svg>`;
+}
+function adminView(){
+  document.body.className = 'hrapp';
+  const ini = (me.full_name || me.email || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+  setApp(`<div class="lay" id="lay"><div class="scrim" id="scrim"></div><aside id="sb" class="dark"><div class="sbl"><div class="logo sm" style="background:#fff;color:#0b2545">HR</div><b>HR Manager <span>Pro</span></b></div><small style="color:#9db4d6;padding:0 8px 12px">Super Admin</small>
+  <div class="sbn">${ANAV.map(([k,l,i]) => `<button data-t="${k}"><span>${i}</span>${l}</button>`).join('')}</div><button class="lo" id="lo">Déconnexion</button></aside>
+  <div class="mainc"><div class="top"><button class="alt bg" id="bg">☰</button><h2 id="ttl"></h2><div class="uc"><div class="avatar s">${esc(ini)}</div><div><b>${esc(me.full_name || me.email)}</b><small>Super admin</small></div></div></div><div id="v" class="pad"></div></div></div>`);
+  const lay = $('#lay'); $('#bg').onclick = () => lay.classList.toggle('open'); $('#scrim').onclick = () => lay.classList.remove('open'); $('#lo').onclick = () => sb.auth.signOut();
+  document.querySelectorAll('.sbn button').forEach(b => b.onclick = () => { atab_.t = b.dataset.t; lay.classList.remove('open'); ashow(); });
+  ashow();
+}
+function ashow(){
+  document.querySelectorAll('.sbn button').forEach(b => b.classList.toggle('on', b.dataset.t === atab_.t));
+  $('#ttl').textContent = ANAV.find(n => n[0] === atab_.t)[1];
+  ({ dash:aDash, cos:aCos, pays:aPays, plans:aPlans, tk:aTk, pw: () => pwForm($('#v')) })[atab_.t]();
+}
+const goA = t => { atab_.t = t; ashow(); };
+async function aDash(){
+  const el = $('#v'); el.innerHTML = '<p>Chargement…</p>'; const yr = new Date().getFullYear();
+  const [s, l, rv, au, pp, py] = await Promise.all([sb.rpc('admin_dashboard_stats'), sb.rpc('admin_company_list'), sb.rpc('admin_revenue_by_month', { p_year: yr }), sb.from('audit_logs').select('action,company_id,created_at').order('created_at', {ascending:false}).limit(8), sb.rpc('admin_pending_payments'), sb.from('payments').select('company_id,amount').eq('status', 'succeeded')]);
+  for (const r of [s, l, rv]) if (r.error) return fail(r.error);
+  const d = s.data, cn = Object.fromEntries(l.data.map(c => [c.id, c.name])), series = (rv.data || []).map(x => +x.revenue), lab = (rv.data || []).map(x => new Date(yr, x.month - 1, 1).toLocaleDateString('fr-FR', {month:'short'}));
+  const by = {}; (py.data || []).forEach(x => by[x.company_id] = (by[x.company_id] || 0) + +x.amount); const top = Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 3), mxT = Math.max(1, ...top.map(t => t[1]));
+  const emp = Object.fromEntries(l.data.map(c => [c.id, c.employee_count])), st = d.subscriptions_by_status || {}, soon = l.data.filter(c => c.period_end && ['active','trial'].includes(c.subscription_status) && new Date(c.period_end) > Date.now() && new Date(c.period_end) - Date.now() < 7 * 864e5).length;
+  const K = [['🏢','#e7efff','Entreprises',d.companies_total,'+' + d.new_companies_30d + ' en 30 jours'],['👥','#f0e8fd','Utilisateurs',d.users_total,fmt(d.employees_total) + ' employés suivis'],['👑','#dff3e9','Abonnements actifs',st.active || 0,(st.trial || 0) + ' en essai'],['💰','#fdeee0','Revenus de l’année (FCFA)',d.revenue_year,'MRR : ' + fmt(d.mrr)]];
+  el.innerHTML = `<div class="grid">${K.map(([i,c,t,v,sub]) => `<div class="kpi kp"><div class="ic" style="background:${c}">${i}</div><div><small>${t}</small><b>${fmt(v)}</b><small style="color:var(--ok)">${sub}</small></div></div>`).join('')}</div>
+  <div class="two3" style="margin-top:14px"><div class="card"><h3>Aperçu des revenus ${yr}</h3><p style="margin:0"><b style="font-size:24px">${fmt(d.revenue_month)} FCFA</b> <small style="color:var(--mut)">encaissés ce mois-ci</small></p>${line(series, lab)}</div>
+  <div class="card"><h3>Abonnements</h3><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${donut(st, SCOL, 'abonnements')}<div>${Object.entries(st).map(([k,v]) => `<p style="margin:4px 0"><span style="color:${SCOL[k] || '#999'}">●</span> ${SUB[k] || k} <b>${v}</b></p>`).join('') || '<p>Aucune donnée.</p>'}</div></div></div>
+  <div class="card"><h3>Activité récente</h3>${(au.data || []).map(a => { const [i, t] = ACT[a.action] || ['•', a.action]; return `<p style="margin:8px 0;display:flex;gap:10px"><span>${i}</span><span style="flex:1"><b>${t}</b><br><small style="color:var(--mut)">${esc(cn[a.company_id]) || ''}</small></span><small style="color:var(--mut)">${ago(a.created_at)}</small></p>`; }).join('') || '<p>Aucune activité.</p>'}</div></div>
+  <div class="two3" style="margin-top:14px"><div class="card"><h3>Meilleurs clients</h3>${top.map(([id, v], i) => `<p style="margin:10px 0 2px"><b>${i + 1}. ${esc(cn[id])}</b> <span style="float:right">${fmt(v)} FCFA</span></p><div style="background:#e8edf5;border-radius:6px;height:8px"><div style="background:#1f9d4d;height:8px;border-radius:6px;width:${Math.round(v / mxT * 100)}%"></div></div><small style="color:var(--mut)">${emp[id] || 0} employés</small>`).join('') || '<p style="color:var(--mut)">Aucun paiement confirmé pour le moment.</p>'}</div>
+  <div class="card"><h3>À traiter</h3>${[['💳','Paiements à vérifier',pp.data?.length || 0,'pays'],['🎧','Réclamations ouvertes',d.open_tickets,'tk'],['⏳','Abonnements qui expirent (7 j)',soon,'cos'],['⛔','Entreprises suspendues',d.companies_suspended,'cos']].map(([i,t,n,go]) => `<p style="margin:10px 0;display:flex;gap:10px;align-items:center"><span>${i}</span><span style="flex:1">${t}</span><span class="tag ${n ? 'warn' : 'ok'}">${n}</span><button class="alt" data-go="${go}" style="padding:5px 10px">Voir</button></p>`).join('')}</div>
+  <div class="card qa"><h3>Actions rapides</h3><button data-go="cos">🏢 Gérer les entreprises</button><button data-go="pays">💳 Vérifier les paiements</button><button data-go="plans">💎 Configurer les plans</button><button data-go="tk">🎧 Répondre au support</button></div></div>`;
+  el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => goA(b.dataset.go));
+}
+async function aCos(){
+  const el = $('#v'), { data, error } = await sb.rpc('admin_company_list'); if (error) return fail(error);
+  el.innerHTML = `<div class="card wrap"><table><tr><th>Entreprise</th><th>Pays</th><th>Plan</th><th>Abonnement</th><th>Expire le</th><th>Employés</th><th>Admin</th><th></th></tr>
+  ${data.map(c => `<tr><td><b>${esc(c.name)}</b>${c.status === 'suspended' ? ' <span class="tag bad">Suspendue</span>' : ''}</td><td>${esc(c.country)}</td><td>${esc(c.plan_id)}</td><td><span class="tag">${SUB[c.subscription_status] || ''}</span></td><td>${c.period_end ? new Date(c.period_end).toLocaleDateString('fr-FR') : '—'}</td><td>${c.employee_count}</td><td>${esc(c.admin_email)}</td>
+  <td><button class="alt" data-s="${c.id}" data-p="${c.plan_id}" data-st="${c.subscription_status}">Abonnement</button> <button class="${c.status === 'active' ? 'danger' : 'alt'}" data-id="${c.id}" data-v="${c.status === 'active' ? 'suspended' : 'active'}">${c.status === 'active' ? 'Suspendre' : 'Réactiver'}</button></td></tr>`).join('') || '<tr><td colspan="8">Aucune entreprise.</td></tr>'}</table></div>`;
+  el.querySelectorAll('[data-id]').forEach(b => b.onclick = async () => { if (b.dataset.v === 'suspended' && !confirm('Suspendre cette entreprise ? Ses utilisateurs perdront l’accès.')) return; const { error } = await sb.rpc('admin_set_company_status', { p_company: b.dataset.id, p_status: b.dataset.v }); error ? fail(error) : (toast('Statut mis à jour'), aCos()); });
+  el.querySelectorAll('[data-s]').forEach(b => b.onclick = async () => { const p = prompt('Formule (starter, professional ou enterprise) :', b.dataset.p); if (!p) return; const j = prompt('Prolonger jusqu’à dans combien de jours ? (vide = ne pas changer la date)', '30');
+    const { error } = await sb.rpc('admin_set_subscription', { p_company: b.dataset.s, p_plan: p.trim().toLowerCase(), p_status: 'active', p_period_end: j ? new Date(Date.now() + +j * 864e5).toISOString() : null }); error ? fail(error) : (toast('Abonnement mis à jour'), aCos()); });
+}
+async function aPays(){
+  const el = $('#v'), [pp, py, l] = await Promise.all([sb.rpc('admin_pending_payments'), sb.from('payments').select('company_id,plan_id,amount,currency,provider,provider_ref,status,created_at').order('created_at', {ascending:false}).limit(30), sb.rpc('admin_company_list')]);
+  if (pp.error) return fail(pp.error); const cn = Object.fromEntries((l.data || []).map(c => [c.id, c.name]));
+  el.innerHTML = `<div class="card wrap"><h3>À vérifier ${pp.data.length ? '<span class="tag warn">' + pp.data.length + '</span>' : ''}</h3><p style="color:var(--mut);font-size:14px;margin:0 0 8px">Vérifiez d’abord dans Wave ou Orange Money que le montant et la référence correspondent.</p><table><tr><th>Date</th><th>Entreprise</th><th>Formule</th><th>Montant</th><th>Moyen</th><th>Référence</th><th></th></tr>
+  ${pp.data.map(x => `<tr><td>${new Date(x.created_at).toLocaleDateString('fr-FR')}</td><td>${esc(x.company_name)}</td><td>${esc(x.plan_id)}</td><td>${fmt(x.amount)} ${esc(x.currency)}</td><td>${PM[x.provider] || esc(x.provider)}</td><td><b>${esc(x.provider_ref)}</b></td><td><button data-ap="${x.id}">Confirmer</button> <button class="danger" data-rj="${x.id}">Refuser</button></td></tr>`).join('') || '<tr><td colspan="7">Aucun paiement en attente.</td></tr>'}</table></div>
+  <div class="card wrap"><h3>Historique</h3><table><tr><th>Date</th><th>Entreprise</th><th>Formule</th><th>Montant</th><th>Moyen</th><th>Statut</th></tr>${(py.data || []).map(x => `<tr><td>${new Date(x.created_at).toLocaleDateString('fr-FR')}</td><td>${esc(cn[x.company_id])}</td><td>${esc(x.plan_id)}</td><td>${fmt(x.amount)} ${esc(x.currency)}</td><td>${PM[x.provider] || esc(x.provider)}</td><td><span class="tag ${x.status === 'succeeded' ? 'ok' : x.status === 'failed' ? 'bad' : 'warn'}">${PY[x.status] || x.status}</span></td></tr>`).join('') || '<tr><td colspan="6">Aucun paiement.</td></tr>'}</table></div>`;
+  const act = (sel, fn, ask, msg) => el.querySelectorAll(sel).forEach(b => b.onclick = async () => { if (!confirm(ask)) return; const { error } = await sb.rpc(fn, { p_payment: b.dataset.ap || b.dataset.rj }); error ? fail(error) : (toast(msg), aPays()); });
+  act('[data-ap]', 'admin_approve_payment', 'Avez-vous bien reçu ce paiement avec cette référence ?', 'Paiement confirmé : abonnement prolongé'); act('[data-rj]', 'admin_reject_payment', 'Refuser ce paiement ?', 'Paiement refusé');
+}
+async function aPlans(){
+  const el = $('#v'), { data, error } = await sb.from('plans').select('*').order('sort_order'); if (error) return fail(error);
+  el.innerHTML = `<p style="color:var(--mut)">Les changements s’appliquent immédiatement à toutes les entreprises de la formule.</p><div class="grid">${data.map(p => `<form class="card" data-pl="${p.id}" style="margin:0"><h3>${esc(p.id)}</h3><label>Nom<input name="nm" value="${esc(p.name)}" required></label><label>Prix mensuel (FCFA)<input name="pr" type="number" min="0" value="${p.price_monthly}" required></label><label>Employés maximum<input name="mx" type="number" min="1" value="${p.max_employees}" required></label>
+  ${Object.entries(FT).map(([k,l]) => `<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" name="${k}" style="width:auto;margin:0" ${p.features[k] ? 'checked' : ''}>${l}</label>`).join('')}<label style="display:flex;gap:8px;align-items:center;margin:6px 0"><input type="checkbox" name="act" style="width:auto;margin:0" ${p.is_active ? 'checked' : ''}>Formule proposée</label><button>Enregistrer</button></form>`).join('')}</div>`;
+  el.querySelectorAll('[data-pl]').forEach(f => f.onsubmit = async ev => { ev.preventDefault(); const p = data.find(x => x.id === f.dataset.pl), v = new FormData(ev.target), ft = { ...p.features }; Object.keys(FT).forEach(k => ft[k] = v.has(k));
+    const { error } = await sb.from('plans').update({ name: v.get('nm'), price_monthly: +v.get('pr'), max_employees: +v.get('mx'), features: ft, is_active: v.has('act') }).eq('id', p.id); error ? fail(error) : (toast('Formule mise à jour'), aPlans()); });
+}
+async function aTk(){
+  const el = $('#v'), [{ data, error }, l] = await Promise.all([sb.from('support_tickets').select('id,company_id,subject,message,status,priority,admin_response,created_at').order('created_at', {ascending:false}).limit(30), sb.rpc('admin_company_list')]); if (error) return fail(error);
+  const cn = Object.fromEntries((l.data || []).map(c => [c.id, c.name]));
+  el.innerHTML = data.map(x => `<div class="card"><b>${esc(x.subject)}</b> <span class="tag ${x.status === 'resolved' ? 'ok' : 'warn'}">${TS[x.status]}</span>${x.priority === 'high' ? ' <span class="tag bad">Urgente</span>' : ''}<br><small style="color:var(--mut)">${esc(cn[x.company_id])} · ${new Date(x.created_at).toLocaleDateString('fr-FR')}</small><p style="margin:8px 0">${esc(x.message)}</p>
+  ${x.admin_response ? `<p style="background:#e7efff;padding:10px;border-radius:10px;margin:0 0 8px"><b>Votre réponse :</b> ${esc(x.admin_response)}</p>` : ''}${x.status === 'resolved' || x.status === 'closed' ? '' : `<button data-tk="${x.id}">Répondre</button>`}</div>`).join('') || '<p>Aucune réclamation.</p>';
+  el.querySelectorAll('[data-tk]').forEach(b => b.onclick = async () => { const r = prompt('Votre réponse :'); if (!r) return; const { error } = await sb.rpc('admin_reply_ticket', { p_ticket: b.dataset.tk, p_status: 'resolved', p_response: r }); error ? fail(error) : (toast('Réponse envoyée'), aTk()); });
 }
 init();
 </script>
