@@ -89,7 +89,7 @@ body.hrapp header{display:none}body.hrapp main{max-width:none;padding:0}
 @media(max-width:860px){.lay{grid-template-columns:1fr}#sb{position:fixed;z-index:30;left:0;top:0;width:262px;transform:translateX(-105%);transition:.25s}.lay.open #sb{transform:none}.lay.open .scrim{display:block;position:fixed;inset:0;background:#0007;z-index:20}.bg{display:block}.uc div:last-child{display:none}.pad{padding:14px}.two{grid-template-columns:1fr}}
 .tag.warn{background:#fdeee0;color:#b9640c}.tag.bad{background:#fde6e6;color:var(--bad)}td button{padding:6px 10px;font-size:13px}.link{color:var(--navy2);text-align:center;cursor:pointer;text-decoration:underline;margin:14px 0 0}td select{padding:6px;font-size:13px;margin:0}#sb.dark{background:linear-gradient(180deg,#0f3170,#0b2545);border-right:0}#sb.dark .sbl{color:#fff}#sb.dark .sbl span{color:#9db4d6}#sb.dark .sbn button{color:#c5d3e8}#sb.dark .sbn button:hover{background:#ffffff14}#sb.dark .sbn button.on{background:#1f6bff;color:#fff}#sb.dark .lo{background:#ffffff1f;color:#fff}
 .two3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.two3 .card{margin:0}@media(max-width:1000px){.two3{grid-template-columns:1fr}}
-</style>
+.avatar{overflow:hidden}</style>
 </head>
 <body class="auth">
 <div id="intro"><button class="skip" id="skip">Passer</button><div class="light"></div><div class="door l"></div><div class="door r"></div>
@@ -186,7 +186,8 @@ async function loadMe(){
   if (!data) { const r = await sb.rpc('claim_employee_profile'); if (r.error) msg = r.error.message; else ({ data } = await getP()); }
   $('#out').hidden = false;
   if (!data) { document.body.className = 'auth'; return setApp(`<div class="authwrap" style="grid-template-columns:1fr"><section class="formside"><div class="card formcard"><h3>Compte non rattaché</h3><p>${esc(msg) || 'Ce compte n’est rattaché à aucune entreprise.'}</p><button onclick="sb.auth.signOut()">Se déconnecter</button></div></section></div>`); }
-  me = data; document.body.className = ''; $('#who').textContent = me.full_name || me.email; tab = 'dash'; $('#pwb').hidden = hr();
+  me = data; document.body.className = '';
+  if (me.role !== 'super_admin') { const [{ data:ee }, { data:cc }] = await Promise.all([sb.from('employees').select('photo_path').eq('profile_id', me.id).maybeSingle(), sb.from('companies').select('logo_url').eq('id', me.company_id).maybeSingle()]); me.photo = ee?.photo_path; me.logo = cc?.logo_url; } $('#who').textContent = me.full_name || me.email; tab = 'dash'; $('#pwb').hidden = hr();
   me.role === 'super_admin' ? adminView() : hr() ? shell() : staffShell();
 }
 
@@ -195,10 +196,10 @@ const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att',
 function shell(){
   document.body.className = 'hrapp';
   const ini = (me.full_name || me.email || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
-  setApp(`<div class="lay" id="lay"><div class="scrim" id="scrim"></div><aside id="sb"><div class="sbl"><div class="logo sm">HR</div><b>HR Manager <span>Pro</span></b></div>
+  setApp(`<div class="lay" id="lay"><div class="scrim" id="scrim"></div><aside id="sb"><div class="sbl"><div class="logo sm"${me.logo ? ph(me.logo) + ' data-fit="contain"' : ''}>HR</div><b>HR Manager <span>Pro</span></b></div>
   <div class="sbn">${NAV.map(([k,l,i,s]) => `<button data-t="${k}" data-s="${s||''}"><span>${i}</span>${l}${s ? '<em>Bientôt</em>' : ''}</button>`).join('')}</div>
   <div class="plan" id="plan"></div><button class="lo" id="lo">Déconnexion</button></aside>
-  <div class="mainc"><div class="top"><button class="alt bg" id="bg">☰</button><h2 id="ttl"></h2><div class="uc"><div class="avatar s">${esc(ini)}</div><div><b>${esc(me.full_name || me.email)}</b><small>${me.role === 'company_admin' ? 'Administrateur' : 'Ressources humaines'}</small></div></div></div><div id="v" class="pad"></div></div></div>`);
+  <div class="mainc"><div class="top"><button class="alt bg" id="bg">☰</button><h2 id="ttl"></h2><div class="uc"><div class="avatar s"${ph(me.photo)}>${esc(ini)}</div><div><b>${esc(me.full_name || me.email)}</b><small>${me.role === 'company_admin' ? 'Administrateur' : 'Ressources humaines'}</small></div></div></div><div id="v" class="pad"></div></div></div>`);
   const lay = $('#lay'); $('#bg').onclick = () => lay.classList.toggle('open'); $('#scrim').onclick = () => lay.classList.remove('open'); $('#lo').onclick = () => sb.auth.signOut();
   document.querySelectorAll('.sbn button').forEach(b => b.onclick = () => {
     if (b.dataset.s) return toast('Bientôt disponible : ' + b.textContent.replace('Bientôt','').trim());
@@ -251,7 +252,7 @@ async function dash(){
 async function emp(){
   const el = $('#v'); el.innerHTML = '<p>Chargement…</p>';
   const [{ data, error }, { data:co }] = await Promise.all([
-    sb.from('employees').select('id,employee_number,first_name,last_name,job_title,email,phone,address,profile_id,status').order('last_name'),
+    sb.from('employees').select('id,employee_number,first_name,last_name,job_title,email,phone,address,photo_path,profile_id,status').order('last_name'),
     sb.from('companies').select('join_code').eq('id', me.company_id).single()]);
   if (error) return fail(error);
   el.innerHTML = `<div class="card"><h3>Donner accès à vos employés</h3>
@@ -262,7 +263,7 @@ async function emp(){
   <label>E-mail<input name="em" type="email" required></label><label>Poste<input name="jt"></label>
   <label>Date d’embauche<input name="hd" type="date" required value="${new Date().toISOString().slice(0,10)}"></label><button>Ajouter</button></div></form>
   <input id="qs" placeholder="Rechercher un employé…" style="margin-bottom:10px"><div class="card wrap"><table id="et"><tr><th>N°</th><th>Nom</th><th>Poste</th><th>E-mail</th><th>Téléphone</th><th>Adresse</th><th>Accès</th><th>Statut</th><th></th></tr>
-  ${data.map(e => `<tr><td>${esc(e.employee_number)}</td><td>${esc(e.first_name)} ${esc(e.last_name)}</td><td>${esc(e.job_title)}</td><td>${esc(e.email)}</td><td>${esc(e.phone)}</td><td>${esc(e.address)}</td><td>${e.profile_id ? '<span class="tag ok">Compte actif</span>' : '<span class="tag">En attente</span>'}</td><td><span class="tag">${ST[e.status] || e.status}</span></td><td><button class="alt" data-v="${e.id}">Voir</button></td></tr>`).join('') || '<tr><td colspan="9">Aucun employé pour le moment.</td></tr>'}</table></div>`;
+  ${data.map(e => `<tr><td>${esc(e.employee_number)}</td><td><span class="avatar s" style="display:inline-grid;vertical-align:middle;margin-right:8px;width:30px;height:30px;font-size:12px"${ph(e.photo_path)}>${esc(((e.first_name || '')[0] || '') + ((e.last_name || '')[0] || ''))}</span>${esc(e.first_name)} ${esc(e.last_name)}</td><td>${esc(e.job_title)}</td><td>${esc(e.email)}</td><td>${esc(e.phone)}</td><td>${esc(e.address)}</td><td>${e.profile_id ? '<span class="tag ok">Compte actif</span>' : '<span class="tag">En attente</span>'}</td><td><span class="tag">${ST[e.status] || e.status}</span></td><td><button class="alt" data-v="${e.id}">Voir</button></td></tr>`).join('') || '<tr><td colspan="9">Aucun employé pour le moment.</td></tr>'}</table></div>`;
   document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => empView(b.dataset.v));
   $('#qs').oninput = ev => document.querySelectorAll('#et tr:not(:first-child)').forEach(r => r.hidden = !r.textContent.toLowerCase().includes(ev.target.value.toLowerCase()));
   $('#cp').onclick = () => navigator.clipboard?.writeText(co.join_code).then(() => toast('Code copié'));
@@ -350,7 +351,7 @@ async function empView(id, t = 'info'){
     docs: () => `<p style="color:var(--mut);font-size:14px;margin:0 0 8px">Ces documents sont ajoutés par l’employé depuis sa page « Mon profil ». Vous pouvez les consulter.</p>
       <table style="margin-top:10px"><tr><th>Type</th><th>Titre</th><th>Ajouté le</th><th></th></tr>${(docs || []).map(d => `<tr><td>${DT[d.doc_type]}</td><td>${esc(d.title)}</td><td>${new Date(d.created_at).toLocaleDateString('fr-FR')}</td><td><button class="alt" data-o="${d.id}">Ouvrir</button> </td></tr>`).join('') || '<tr><td colspan="4">Aucun document.</td></tr>'}</table>` }[t]();
   el.innerHTML = `<button class="alt" id="bk" style="margin-bottom:14px">← Retour aux employés</button><div class="two" style="grid-template-columns:1fr 2fr">
-  <div class="card" style="text-align:center"><div class="avatar" style="margin:0 auto 10px;width:84px;height:84px;font-size:30px">${esc(ini.toUpperCase())}</div><h3>${esc(e.first_name)} ${esc(e.last_name)}</h3>
+  <div class="card" style="text-align:center"><div class="avatar" style="margin:0 auto 10px;width:84px;height:84px;font-size:30px"${ph(e.photo_path)}>${esc(ini.toUpperCase())}</div><h3>${esc(e.first_name)} ${esc(e.last_name)}</h3>
   <p><span class="tag ${e.status === 'active' ? 'ok' : ''}">${ST[e.status] || e.status}</span></p><p style="margin:4px 0">${esc(e.job_title) || 'Poste non renseigné'}</p><p style="margin:4px 0;color:var(--mut)">${esc(dn[e.department_id]) || ''}</p>
   <button id="ed" style="margin-top:10px;width:100%">Modifier le profil</button></div>
   <div class="card"><nav>${[['info','Informations'],['emp','Emploi'],['docs','Documents'],['pay','Salaire'],['edit','Modifier']].map(([k,l]) => `<button data-p="${k}" class="${t === k ? 'on' : ''}">${l}</button>`).join('')}</nav><div class="wrap">${body}</div></div></div>`;
@@ -494,7 +495,7 @@ async function settings(){
   if (t === 'co') body = `<form id="sf"><div class="row"><label>Nom de l’entreprise<input name="nm" value="${esc(c.name)}" required minlength="2" ${adm ? '' : 'disabled'}></label>
     <label>Pays<select name="ct" ${adm ? '' : 'disabled'}>${o(COUNTRIES, c.country)}</select></label><label>Fuseau horaire<select name="tz" ${adm ? '' : 'disabled'}>${o(TZ.map(x => [x,x]), c.timezone)}</select></label>
     <label>Langue par défaut<select name="lg" ${adm ? '' : 'disabled'}>${o(LG, c.default_language)}</select></label></div>
-    <p style="color:var(--mut);font-size:14px">Le pays détermine les règles de paie appliquées. Devise : ${esc(c.currency)}.</p>${adm ? '<button>Enregistrer</button>' : '<p style="color:var(--mut)">Seul l’administrateur peut modifier ces informations.</p>'}</form>`;
+    <p style="color:var(--mut);font-size:14px">Le pays détermine les règles de paie appliquées. Devise : ${esc(c.currency)}.</p>${adm ? '<button>Enregistrer</button>' : '<p style="color:var(--mut)">Seul l’administrateur peut modifier ces informations.</p>'}</form>${adm ? `<div style="margin-top:18px"><h3>Logo de l’entreprise</h3><div class="logo sm" style="width:72px;height:72px;margin:0 0 10px;font-size:22px" data-fit="contain"${ph(c.logo_url)}>HR</div><input type="file" id="lf" accept="image/*"></div>` : ''}`;
   else { const { data:us } = await sb.from('profiles').select('id,full_name,email,role,is_active').order('full_name');
     body = `<table><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Accès</th></tr>${(us || []).map(u => `<tr><td>${esc(u.full_name)}</td><td>${esc(u.email)}</td>
     <td>${u.id === me.id ? '<span class="tag">' + ROLES[u.role] + ' (vous)</span>' : `<select data-r="${u.id}">${Object.entries(ROLES).map(([k,l]) => `<option value="${k}" ${k === u.role ? 'selected' : ''} ${k === 'manager' && u.role !== 'manager' ? 'disabled' : ''}>${l}${k === 'manager' ? ' (bientôt)' : ''}</option>`).join('')}</select>`}</td>
@@ -502,6 +503,9 @@ async function settings(){
     <p style="color:var(--mut);font-size:14px">Les employés rejoignent l’entreprise avec le code d’invitation. Ici, vous pouvez leur donner le rôle RH ou Administrateur, ou désactiver leur accès.</p>`; }
   el.innerHTML = `<nav>${[['co','Entreprise'], ...(adm ? [['users','Utilisateurs']] : [])].map(([k,l]) => `<button data-t3="${k}" class="${t === k ? 'on' : ''}">${l}</button>`).join('')}</nav><div class="card wrap">${body}</div>`;
   el.querySelectorAll('[data-t3]').forEach(b => b.onclick = () => { settings.t = b.dataset.t3; settings(); });
+  if ($('#lf')) $('#lf').onchange = async ev => { const f = ev.target.files[0]; if (!f) return; if (!f.type.startsWith('image/')) return toast('Choisissez une image', true);
+    const b = await shrink(f, 400, 'image/png'), path = `${me.company_id}/logo/logo-${Date.now()}.png`, up = await sb.storage.from('avatars').upload(path, b, { contentType: 'image/png'}); if (up.error) return fail(up.error);
+    const r = await sb.rpc('set_company_logo', { p_path: path }); if (r.error) return fail(r.error); if (c.logo_url) sb.storage.from('avatars').remove([c.logo_url]); toast('Logo enregistré'); loadMe(); };
   if ($('#sf') && adm) $('#sf').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
     const { error } = await sb.from('companies').update({ name: f.nm.trim(), country: f.ct, timezone: f.tz, default_language: f.lg }).eq('id', me.company_id); error ? fail(error) : toast('Paramètres enregistrés'); };
   el.querySelectorAll('[data-r]').forEach(b => b.onchange = async () => { const { error } = await sb.from('profiles').update({ role: b.value }).eq('id', b.dataset.r); error ? fail(error) : toast('Rôle mis à jour'); });
@@ -591,7 +595,8 @@ async function profile(el){
   if (!e) return el.innerHTML = '<div class="card"><p>Aucune fiche employé n’est liée à votre compte.</p></div>';
   const { data:docs } = await sb.from('employee_documents').select('id,doc_type,title,storage_path,created_at').eq('employee_id', e.id).order('created_at', {ascending:false});
   const ini = ((e.first_name || '')[0] || '') + ((e.last_name || '')[0] || '');
-  el.innerHTML = `<div class="card prof"><div class="avatar">${esc(ini.toUpperCase())}</div><div><h3>${esc(e.first_name)} ${esc(e.last_name)}</h3><p>${esc(e.job_title) || 'Poste non renseigné'} · ${esc(e.employee_number)}</p><p>${esc(e.email)} · Embauché le ${esc(e.hire_date)}</p></div></div>
+  el.innerHTML = `<div class="card prof"><div class="avatar"${ph(e.photo_path)}>${esc(ini.toUpperCase())}</div><div><h3>${esc(e.first_name)} ${esc(e.last_name)}</h3><p>${esc(e.job_title) || 'Poste non renseigné'} · ${esc(e.employee_number)}</p><p>${esc(e.email)} · Embauché le ${esc(e.hire_date)}</p></div></div>
+  <div class="card"><h3>Ma photo</h3><p style="color:var(--mut);font-size:14px;margin:0 0 8px">Visible par les membres de votre entreprise. Elle est automatiquement réduite.</p><input type="file" id="phf" accept="image/*"></div>
   <form class="card" id="cf3"><h3>Mes coordonnées</h3><p style="color:var(--mut);font-size:14px;margin:0">Visibles par votre RH. Vous seul pouvez les modifier.</p>
   <div class="row"><label>Téléphone<input name="ph" type="tel" value="${esc(e.phone)}" placeholder="+221 77 123 45 67"></label><label>Adresse<input name="ad" value="${esc(e.address)}" placeholder="Quartier, ville"></label><button>Enregistrer</button></div></form>
   <div class="card"><h3>Mes documents</h3><p style="color:var(--mut);font-size:14px;margin:0 0 8px">Visibles par votre RH. Vous seul pouvez les ajouter ou les supprimer (PDF ou image, 10 Mo maximum).</p>
@@ -599,6 +604,9 @@ async function profile(el){
   <label>Fichier<input name="fl" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" required></label><button>Ajouter</button></form>
   <div class="wrap"><table style="margin-top:10px"><tr><th>Type</th><th>Titre</th><th>Ajouté le</th><th></th></tr>${(docs || []).map(d => `<tr><td>${DT[d.doc_type]}</td><td>${esc(d.title)}</td><td>${new Date(d.created_at).toLocaleDateString('fr-FR')}</td><td><button class="alt" data-o="${d.id}">Ouvrir</button> <button class="danger" data-x="${d.id}">Supprimer</button></td></tr>`).join('') || '<tr><td colspan="4">Aucun document.</td></tr>'}</table></div></div>`;
   $('#cf3').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target)); const { error } = await sb.rpc('update_my_contact', { p_phone: f.ph, p_address: f.ad }); error ? fail(error) : toast('Coordonnées enregistrées'); };
+  $('#phf').onchange = async ev => { const f = ev.target.files[0]; if (!f) return; if (!f.type.startsWith('image/')) return toast('Choisissez une image', true);
+    const b = await shrink(f, 512, 'image/jpeg'), path = `${me.company_id}/p/${e.id}-${Date.now()}.jpg`, up = await sb.storage.from('avatars').upload(path, b, { contentType: 'image/jpeg'}); if (up.error) return fail(up.error);
+    const r = await sb.rpc('set_my_photo', { p_path: path }); if (r.error) return fail(r.error); if (e.photo_path) sb.storage.from('avatars').remove([e.photo_path]); me.photo = path; toast('Photo enregistrée'); profile(el); };
   $('#df2').onsubmit = async ev => { ev.preventDefault(); const f = new FormData(ev.target), file = f.get('fl');
     if (file.size > 10485760) return toast('Fichier trop lourd (10 Mo max)', true);
     const path = `${me.company_id}/${e.id}/${Date.now()}-${file.name.replace(/[^\w.\-]/g, '_')}`, up = await sb.storage.from('employee-docs').upload(path, file); if (up.error) return fail(up.error);
@@ -608,6 +616,21 @@ async function profile(el){
   el.querySelectorAll('[data-x]').forEach(b => b.onclick = async () => { if (!confirm('Supprimer ce document ?')) return; const d = docs.find(x => x.id === b.dataset.x);
     await sb.storage.from('employee-docs').remove([d.storage_path]); const { error } = await sb.from('employee_documents').delete().eq('id', d.id); error ? fail(error) : (toast('Document supprimé'), profile(el)); });
 }
+/* ---------- photos et logo ---------- */
+const PH = {}; let hydT;
+async function hydrate(){
+  const els = [...document.querySelectorAll('[data-ph]:not([data-ok])')]; if (!els.length) return;
+  const need = [...new Set(els.map(x => x.dataset.ph).filter(p => !PH[p]))];
+  if (need.length) { const { data } = await sb.storage.from('avatars').createSignedUrls(need, 3600); (data || []).forEach(d => { if (d.signedUrl) PH[d.path] = d.signedUrl; }); }
+  els.forEach(x => { const u = PH[x.dataset.ph]; if (!u) return; x.dataset.ok = 1; Object.assign(x.style, { backgroundImage: `url("${u}")`, backgroundSize: x.dataset.fit || 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundColor: '#fff', color: 'transparent' }); });
+}
+new MutationObserver(() => { clearTimeout(hydT); hydT = setTimeout(hydrate, 120); }).observe(document.body, { childList: true, subtree: true });
+async function shrink(file, max, type){
+  const bmp = await createImageBitmap(file), k = Math.min(1, max / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k); c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  return new Promise(r => c.toBlob(r, type, .85));
+}
+const ph = p => p ? ` data-ph="${esc(p)}"` : '';
 /* ---------- espace de l’employé : profil et pointage ---------- */
 async function myArea(el){
   el.innerHTML = '<p>Chargement…</p>';
@@ -615,7 +638,7 @@ async function myArea(el){
   if (!e) return el.innerHTML = '<div class="card"><p>Aucune fiche employé n’est liée à votre compte.</p></div>';
   const { data:at } = await sb.from('attendance').select('work_date,check_in,check_out,status').eq('employee_id', e.id).order('work_date', { ascending:false }).limit(7);
   const ini = ((e.first_name||'')[0] || '') + ((e.last_name||'')[0] || '');
-  el.innerHTML = `<div class="card prof"><div class="avatar">${esc(ini.toUpperCase())}</div><div><h3>${esc(e.first_name)} ${esc(e.last_name)}</h3>
+  el.innerHTML = `<div class="card prof"><div class="avatar"${ph(e.photo_path)}>${esc(ini.toUpperCase())}</div><div><h3>${esc(e.first_name)} ${esc(e.last_name)}</h3>
   <p>${esc(e.job_title) || 'Poste non renseigné'} · ${esc(e.employee_number)}</p><p>Embauché le ${esc(e.hire_date)} · <span class="tag">${ST[e.status] || e.status}</span></p></div></div>
   <div class="card"><h3>Pointage</h3><p style="color:var(--mut);font-size:14px">L’heure enregistrée est celle du serveur.</p>
   <div class="row"><button id="ci">Pointer mon arrivée</button><button id="co" class="alt">Pointer mon départ</button></div></div>
@@ -642,7 +665,7 @@ function adminView(){
   const ini = (me.full_name || me.email || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
   setApp(`<div class="lay" id="lay"><div class="scrim" id="scrim"></div><aside id="sb" class="dark"><div class="sbl"><div class="logo sm" style="background:#fff;color:#0b2545">HR</div><b>HR Manager <span>Pro</span></b></div><small style="color:#9db4d6;padding:0 8px 12px">Super Admin</small>
   <div class="sbn">${ANAV.map(([k,l,i]) => `<button data-t="${k}"><span>${i}</span>${l}</button>`).join('')}</div><button class="lo" id="lo">Déconnexion</button></aside>
-  <div class="mainc"><div class="top"><button class="alt bg" id="bg">☰</button><h2 id="ttl"></h2><div class="uc"><div class="avatar s">${esc(ini)}</div><div><b>${esc(me.full_name || me.email)}</b><small>Super admin</small></div></div></div><div id="v" class="pad"></div></div></div>`);
+  <div class="mainc"><div class="top"><button class="alt bg" id="bg">☰</button><h2 id="ttl"></h2><div class="uc"><div class="avatar s"${ph(me.photo)}>${esc(ini)}</div><div><b>${esc(me.full_name || me.email)}</b><small>Super admin</small></div></div></div><div id="v" class="pad"></div></div></div>`);
   const lay = $('#lay'); $('#bg').onclick = () => lay.classList.toggle('open'); $('#scrim').onclick = () => lay.classList.remove('open'); $('#lo').onclick = () => sb.auth.signOut();
   document.querySelectorAll('.sbn button').forEach(b => b.onclick = () => { atab_.t = b.dataset.t; lay.classList.remove('open'); ashow(); });
   ashow();
