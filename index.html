@@ -98,6 +98,8 @@ body.hrapp header{display:none}body.hrapp main{max-width:none;padding:0}
 <main id="app"></main>
 <div id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
 const sb = supabase.createClient('https://egxoglirjqnzkullsrez.supabase.co','sb_publishable_XnzmsUCYgpPclGJlQMYPJg_XjYFlEYh');
 const $ = s => document.querySelector(s);
@@ -192,7 +194,7 @@ async function loadMe(){
 }
 
 /* ---------- entreprise (RH / admin) ---------- */
-const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘'],['leave','Congés','🌴'],['pay','Paie','💳'],['rec','Recrutement','📋'],['perf','Performance','📈'],['rep','Rapports','📊'],['set','Paramètres','⚙️'],['sub','Abonnement','💎'],['sup','Support','🎧'],['prof','Mon profil','🪪'],['me','Mon espace','👤'],['pw','Mot de passe','🔒']];
+const NAV = [['dash','Tableau de bord','▦'],['emp','Employés','👥'],['att','Présences','🕘'],['kiosk','Borne de pointage','🧾'],['leave','Congés','🌴'],['pay','Paie','💳'],['rec','Recrutement','📋'],['perf','Performance','📈'],['rep','Rapports','📊'],['set','Paramètres','⚙️'],['sub','Abonnement','💎'],['sup','Support','🎧'],['prof','Mon profil','🪪'],['me','Mon espace','👤'],['pw','Mot de passe','🔒']];
 function shell(){
   document.body.className = 'hrapp';
   const ini = (me.full_name || me.email || '?').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
@@ -215,7 +217,7 @@ function shell(){
 function show(){
   document.querySelectorAll('.sbn button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
   $('#ttl').textContent = NAV.find(n => n[0] === tab)[1];
-  ({ dash, emp, att, leave, pay, rec, sub, perf, rep: reports, set: settings, sup: support, prof: () => profile($('#v')), me: () => myArea($('#v')), pw: () => pwForm($('#v')) })[tab]();
+  ({ dash, emp, att, kiosk, leave, pay, rec, sub, perf, rep: reports, set: settings, sup: support, prof: () => profile($('#v')), me: () => myArea($('#v')), pw: () => pwForm($('#v')) })[tab]();
 }
 function staffShell(t = 'me'){
   setApp(`<nav>${[['me','Mon espace'],['prof','Mon profil']].map(([k,l]) => `<button data-s="${k}" class="${t === k ? 'on' : ''}">${l}</button>`).join('')}</nav><div id="v"></div>`);
@@ -289,8 +291,12 @@ async function att(){
   el.innerHTML = `<div class="row" style="margin-bottom:14px"><label>Mois<input type="month" id="mm" value="${m}"></label><button id="ex" class="alt">Exporter (CSV)</button></div>
   ${kpis([['✅','#dff3e9','Présents',c(['present','half_day'])],['⏰','#fde6e6','Retards',c(['late'])],['🚫','#fdeee0','Absents',c(['absent'])]])}
   <div class="card wrap" style="margin-top:14px"><table><tr><th>Date</th><th>Employé</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr>
-  ${data.map(a => `<tr><td>${fd(a.work_date)}</td><td>${esc(nm[a.employee_id])}</td><td>${hhmm(a.check_in)}</td><td>${hhmm(a.check_out)}</td><td><span class="tag ${a.status === 'present' ? 'ok' : a.status === 'late' ? 'warn' : a.status === 'absent' ? 'bad' : ''}">${AT[a.status] || a.status}</span></td></tr>`).join('') || '<tr><td colspan="5">Aucun pointage ce mois-ci.</td></tr>'}</table></div>`;
+  ${data.map(a => `<tr><td>${fd(a.work_date)}</td><td>${esc(nm[a.employee_id])}</td><td>${hhmm(a.check_in)}</td><td>${hhmm(a.check_out)}</td><td><span class="tag ${a.status === 'present' ? 'ok' : a.status === 'late' ? 'warn' : a.status === 'absent' ? 'bad' : ''}">${AT[a.status] || a.status}</span></td></tr>`).join('') || '<tr><td colspan="5">Aucun pointage ce mois-ci.</td></tr>'}</table></div>
+  <form class="card" id="mf"><h3>Ajouter ou corriger un pointage</h3><div class="row"><label>Employé<select name="em" required>${Object.entries(nm).map(([k,v]) => `<option value="${k}">${esc(v)}</option>`).join('')}</select></label><label>Date<input name="d" type="date" required value="${new Date().toISOString().slice(0,10)}"></label>
+  <label>Arrivée<input name="a" type="time"></label><label>Départ<input name="b" type="time"></label><label>Statut<select name="st"><option value="present">Présent</option><option value="late">Retard</option><option value="absent">Absent</option><option value="half_day">Demi-journée</option><option value="leave">Congé</option></select></label><button>Enregistrer</button></div></form>`;
   $('#mm').onchange = e => { att.m = e.target.value || m; att(); };
+  $('#mf').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target)), ts = x => x ? new Date(f.d + 'T' + x).toISOString() : null;
+    const { error } = await sb.from('attendance').upsert({ company_id: me.company_id, employee_id: f.em, work_date: f.d, check_in: ts(f.a), check_out: ts(f.b), status: f.st, source: 'manual', note: 'Corrigé par la RH' }, { onConflict: 'employee_id,work_date' }); error ? fail(error) : (toast('Pointage enregistré'), att()); };
   $('#ex').onclick = () => {
     const rows = [['Date','Employé','Arrivée','Départ','Statut'], ...data.map(a => [a.work_date, nm[a.employee_id], hhmm(a.check_in), hhmm(a.check_out), AT[a.status] || a.status])];
     const u = URL.createObjectURL(new Blob(['\ufeff' + rows.map(r => r.map(x => '"' + String(x ?? '').replace(/"/g,'""') + '"').join(';')).join('\n')], {type:'text/csv'}));
@@ -338,11 +344,12 @@ async function empView(id, t = 'info'){
   const R = (l, v) => `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><small style="color:var(--mut)">${l}</small><div><b>${esc(v) || '—'}</b></div></div>`;
   const opts = (arr, sel, none) => (none ? `<option value="">${none}</option>` : '') + arr.map(([v,l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${esc(l)}</option>`).join('');
   const body = { info: () => R('E-mail', e.email) + R('Téléphone', e.phone || 'Non renseigné par l’employé') + R('Adresse', e.address || 'Non renseignée par l’employé') + R('Date d’embauche', e.hire_date),
-    emp: () => R('Poste', e.job_title) + R('Département', dn[e.department_id]) + R('Type de contrat', CT[e.contract_type]) + R('Responsable direct', nm[e.manager_id]) + R('Numéro', e.employee_number) + R('Accès à l’application', e.profile_id ? 'Compte actif' : 'En attente d’inscription'),
+    emp: () => R('Poste', e.job_title) + R('Département', dn[e.department_id]) + R('Type de contrat', CT[e.contract_type]) + R('Responsable direct', nm[e.manager_id]) + R('Numéro', e.employee_number) + R('Accès à l’application', e.profile_id ? 'Compte actif' : 'En attente d’inscription') + R('Pointage à distance', e.remote_clock ? 'Autorisé' : 'Non (QR obligatoire si activé)'),
     edit: () => `<form id="ef"><div class="row"><label>Prénom<input name="fn" value="${esc(e.first_name)}" required></label><label>Nom<input name="ln" value="${esc(e.last_name)}" required></label>
       <label>E-mail<input name="em" type="email" value="${esc(e.email)}" ${e.profile_id ? 'disabled' : ''}></label>      <label>Poste<input name="jt" value="${esc(e.job_title)}"></label><label>Département<select name="dp">${opts((deps || []).map(d => [d.id, d.name]), e.department_id, '—')}</select></label>
       <label>Responsable<select name="mg">${opts(Object.entries(nm).filter(([k]) => k !== id), e.manager_id, '—')}</select></label>
-      <label>Contrat<select name="ct">${opts(Object.entries(CT), e.contract_type)}</select></label></div>
+      <label>Contrat<select name="ct">${opts(Object.entries(CT), e.contract_type)}</select></label>
+      <label>Pointage à distance<select name="rc"><option value="false">Non (QR obligatoire)</option><option value="true" ${e.remote_clock ? 'selected' : ''}>Oui (télétravail, terrain)</option></select></label></div>
       <p><button>Enregistrer</button> <button type="button" class="alt" id="nd">Nouveau département</button></p></form>`,
     pay: () => `<form id="pf"><div class="row"><label>Salaire de base mensuel<input name="bs" type="number" min="0" step="1" value="${pp?.base_salary ?? ''}" required></label>
       <label>Statut cadre<select name="ex"><option value="false">Non</option><option value="true" ${pp?.is_executive ? 'selected' : ''}>Oui</option></select></label>
@@ -360,7 +367,7 @@ async function empView(id, t = 'info'){
   if (t === 'edit') {
     $('#nd').onclick = async () => { const n = prompt('Nom du département :'); if (!n) return; const { error } = await sb.from('departments').insert({ company_id: me.company_id, name: n.trim() }); error ? fail(error) : (toast('Département créé'), empView(id, 'edit')); };
     $('#ef').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target));
-      const u = { first_name: f.fn, last_name: f.ln, job_title: f.jt || null, department_id: f.dp || null, manager_id: f.mg || null, contract_type: f.ct };
+      const u = { first_name: f.fn, last_name: f.ln, job_title: f.jt || null, department_id: f.dp || null, manager_id: f.mg || null, contract_type: f.ct, remote_clock: f.rc === 'true' };
       if (!e.profile_id && f.em) u.email = f.em.trim().toLowerCase();
       const { error } = await sb.from('employees').update(u).eq('id', id); error ? fail(error) : (toast('Profil mis à jour'), empView(id, 'info')); };
   }
@@ -496,13 +503,20 @@ async function settings(){
     <label>Pays<select name="ct" ${adm ? '' : 'disabled'}>${o(COUNTRIES, c.country)}</select></label><label>Fuseau horaire<select name="tz" ${adm ? '' : 'disabled'}>${o(TZ.map(x => [x,x]), c.timezone)}</select></label>
     <label>Langue par défaut<select name="lg" ${adm ? '' : 'disabled'}>${o(LG, c.default_language)}</select></label></div>
     <p style="color:var(--mut);font-size:14px">Le pays détermine les règles de paie appliquées. Devise : ${esc(c.currency)}.</p>${adm ? '<button>Enregistrer</button>' : '<p style="color:var(--mut)">Seul l’administrateur peut modifier ces informations.</p>'}</form>${adm ? `<div style="margin-top:18px"><h3>Logo de l’entreprise</h3><div class="logo sm" style="width:72px;height:72px;margin:0 0 10px;font-size:22px" data-fit="contain"${ph(c.logo_url)}>HR</div><input type="file" id="lf" accept="image/*"></div>` : ''}`;
+  else if (t === 'clock') body = clockForm(c);
   else { const { data:us } = await sb.from('profiles').select('id,full_name,email,role,is_active').order('full_name');
     body = `<table><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Accès</th></tr>${(us || []).map(u => `<tr><td>${esc(u.full_name)}</td><td>${esc(u.email)}</td>
     <td>${u.id === me.id ? '<span class="tag">' + ROLES[u.role] + ' (vous)</span>' : `<select data-r="${u.id}">${Object.entries(ROLES).map(([k,l]) => `<option value="${k}" ${k === u.role ? 'selected' : ''} ${k === 'manager' && u.role !== 'manager' ? 'disabled' : ''}>${l}${k === 'manager' ? ' (bientôt)' : ''}</option>`).join('')}</select>`}</td>
     <td>${u.id === me.id ? '' : `<button class="${u.is_active ? 'danger' : 'alt'}" data-a="${u.id}" data-v="${u.is_active ? 'false' : 'true'}">${u.is_active ? 'Désactiver' : 'Réactiver'}</button>`}</td></tr>`).join('')}</table>
     <p style="color:var(--mut);font-size:14px">Les employés rejoignent l’entreprise avec le code d’invitation. Ici, vous pouvez leur donner le rôle RH ou Administrateur, ou désactiver leur accès.</p>`; }
-  el.innerHTML = `<nav>${[['co','Entreprise'], ...(adm ? [['users','Utilisateurs']] : [])].map(([k,l]) => `<button data-t3="${k}" class="${t === k ? 'on' : ''}">${l}</button>`).join('')}</nav><div class="card wrap">${body}</div>`;
+  el.innerHTML = `<nav>${[['co','Entreprise'], ...(adm ? [['users','Utilisateurs'],['clock','Pointage']] : [])].map(([k,l]) => `<button data-t3="${k}" class="${t === k ? 'on' : ''}">${l}</button>`).join('')}</nav><div class="card wrap">${body}</div>`;
   el.querySelectorAll('[data-t3]').forEach(b => b.onclick = () => { settings.t = b.dataset.t3; settings(); });
+  if ($('#kf')) {
+    $('#gp').onclick = () => navigator.geolocation.getCurrentPosition(p => { settings.pos = [p.coords.latitude, p.coords.longitude]; $('#pp').textContent = settings.pos.map(v => v.toFixed(5)).join(', ') + ' (à enregistrer)'; }, () => toast('Autorisez la localisation dans votre navigateur', true), { enableHighAccuracy: true, timeout: 12000 });
+    $('#kf').onsubmit = async ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target)), pos = settings.pos || (c.site_lat != null ? [c.site_lat, c.site_lng] : null);
+      if (f.md === 'qr_gps' && !pos) return toast('Définissez d’abord la position du lieu de travail', true);
+      const { error } = await sb.from('companies').update({ clock_mode: f.md, site_lat: pos ? pos[0] : null, site_lng: pos ? pos[1] : null, site_radius_m: +f.rd }).eq('id', me.company_id); settings.pos = null; error ? fail(error) : (toast('Mode de pointage enregistré'), settings()); };
+  }
   if ($('#lf')) $('#lf').onchange = async ev => { const f = ev.target.files[0]; if (!f) return; if (!f.type.startsWith('image/')) return toast('Choisissez une image', true);
     const b = await shrink(f, 400, 'image/png'), path = `${me.company_id}/logo/logo-${Date.now()}.png`, up = await sb.storage.from('avatars').upload(path, b, { contentType: 'image/png'}); if (up.error) return fail(up.error);
     const r = await sb.rpc('set_company_logo', { p_path: path }); if (r.error) return fail(r.error); if (c.logo_url) sb.storage.from('avatars').remove([c.logo_url]); toast('Logo enregistré'); loadMe(); };
@@ -631,6 +645,59 @@ async function shrink(file, max, type){
   return new Promise(r => c.toBlob(r, type, .85));
 }
 const ph = p => p ? ` data-ph="${esc(p)}"` : '';
+/* ---------- pointage sécurisé : borne QR, scanner, position ---------- */
+let kioskT;
+async function kiosk(){
+  const el = $('#v'); clearInterval(kioskT);
+  const { data:co } = await sb.from('companies').select('name,clock_mode').eq('id', me.company_id).single();
+  el.innerHTML = `<div class="card" style="text-align:center;max-width:520px;margin:0 auto"><h3>Borne de pointage</h3>
+  <p style="color:var(--mut);font-size:14px;margin:0 0 12px">Affichez cette page sur l’écran de l’entrée. Les employés la scannent avec l’application (Mon espace). Le code change toutes les 30 secondes : une photo devient vite inutilisable.</p>
+  ${co?.clock_mode === 'free' ? '<p class="tag warn" style="display:inline-block">Mode actuel : libre. Activez le QR dans Paramètres > Pointage.</p>' : ''}
+  <div id="qrbox" style="background:#fff;padding:14px;border-radius:18px;display:inline-block;border:1px solid var(--line)"><p style="margin:60px">Chargement…</p></div>
+  <p style="margin:14px 0 4px;color:var(--mut)">Code de secours</p><div class="code" id="kc">------</div><p id="kt" style="color:var(--mut);margin:10px 0"></p>
+  <button class="alt" id="fs">Plein écran</button></div>`;
+  $('#fs').onclick = () => (el.requestFullscreen || el.webkitRequestFullscreen || (() => toast('Plein écran indisponible', true))).call(el);
+  let left = 0;
+  const load = async () => {
+    const { data, error } = await sb.rpc('clock_kiosk_code'); if (error) { clearInterval(kioskT); return fail(error); }
+    const r = Array.isArray(data) ? data[0] : data; left = r.seconds_left; $('#kc').textContent = r.code.replace(/(\d{3})(\d{3})/, '$1 $2');
+    if (typeof qrcode !== 'undefined') { const q = qrcode(0, 'M'); q.addData('HRMP-' + r.token); q.make(); $('#qrbox').innerHTML = q.createSvgTag(8, 2); const s = $('#qrbox svg'); s.removeAttribute('width'); s.removeAttribute('height'); s.style.cssText = 'width:min(70vw,320px);height:auto;display:block'; }
+    else $('#qrbox').innerHTML = '<p style="margin:40px">QR indisponible : utilisez le code de secours.</p>';
+  };
+  await load();
+  kioskT = setInterval(() => { if (!$('#qrbox')) return clearInterval(kioskT); left--; $('#kt').textContent = 'Nouveau code dans ' + Math.max(left, 0) + ' s'; if (left <= 0) load(); }, 1000);
+}
+function scanner(onProof){
+  const o = document.createElement('div'); o.style.cssText = 'position:fixed;inset:0;background:#000e;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:12px;text-align:center';
+  o.innerHTML = `<div style="color:#fff;font-weight:700;font-size:18px">Scannez le QR code de la borne</div><video id="sv" playsinline muted style="width:min(90vw,420px);border-radius:16px;background:#111"></video>
+  <div style="color:#c5d3e8;font-size:14px">ou saisissez le code à 6 chiffres affiché sur la borne</div><div style="display:flex;gap:8px"><input id="sc" inputmode="numeric" maxlength="12" placeholder="000000" style="width:170px;text-align:center;font-size:22px;letter-spacing:.2em"><button id="sk">Valider</button></div><button class="alt" id="sx">Annuler</button>`;
+  document.body.appendChild(o); let stream, live = true;
+  const stop = () => { live = false; stream?.getTracks().forEach(t => t.stop()); o.remove(); };
+  o.querySelector('#sx').onclick = stop; o.querySelector('#sk').onclick = () => { const v = o.querySelector('#sc').value.replace(/\s/g, ''); if (v.length < 4) return toast('Saisissez le code de la borne', true); stop(); onProof(v); };
+  if (!navigator.mediaDevices?.getUserMedia) return toast('Caméra indisponible : saisissez le code de la borne', true);
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(s => {
+    stream = s; const v = o.querySelector('#sv'); v.srcObject = s; v.play(); const c = document.createElement('canvas'), x = c.getContext('2d', { willReadFrequently: true });
+    const tick = () => { if (!live) return; if (v.readyState >= 2 && window.jsQR) { c.width = v.videoWidth; c.height = v.videoHeight; x.drawImage(v, 0, 0); const q = jsQR(x.getImageData(0, 0, c.width, c.height).data, c.width, c.height); if (q && q.data.startsWith('HRMP-')) { stop(); return onProof(q.data.slice(5)); } } setTimeout(tick, 150); };
+    tick();
+  }).catch(() => toast('Caméra non autorisée : saisissez le code de la borne', true));
+}
+async function clockAction(fn, e, el){
+  const { data:c } = await sb.from('companies').select('clock_mode').eq('id', me.company_id).single(), mode = c?.clock_mode || 'free';
+  const done = r => r.error ? fail(r.error) : (toast(fn === 'check_in' ? 'Arrivée enregistrée' : 'Départ enregistré'), myArea(el));
+  if (mode === 'free' || e.remote_clock) return done(await sb.rpc(fn));
+  scanner(async proof => {
+    let lat = null, lng = null;
+    if (mode === 'qr_gps') { try { const p = await new Promise((ok, ko) => navigator.geolocation.getCurrentPosition(ok, ko, { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 })); lat = p.coords.latitude; lng = p.coords.longitude; } catch (x) { return toast('Position requise : autorisez la localisation dans votre navigateur', true); } }
+    done(await sb.rpc(fn, { p_proof: proof, p_lat: lat, p_lng: lng }));
+  });
+}
+function clockForm(c){
+  const has = c.site_lat != null, o = (v, l) => `<option value="${v}" ${c.clock_mode === v ? 'selected' : ''}>${l}</option>`;
+  return `<form id="kf"><div class="row"><label>Mode de pointage<select name="md">${o('free', 'Libre (sans QR code)')}${o('qr', 'QR code obligatoire')}${o('qr_gps', 'QR code et position')}</select></label><label>Rayon autorisé (mètres)<input name="rd" type="number" min="30" max="2000" value="${c.site_radius_m ?? 150}"></label></div>
+  <p style="margin:6px 0">Position du lieu de travail : <b id="pp">${has ? Number(c.site_lat).toFixed(5) + ', ' + Number(c.site_lng).toFixed(5) : 'non définie'}</b></p>
+  <p style="color:var(--mut);font-size:14px;margin:0 0 10px">Pour définir la position, placez-vous sur le lieu de travail avec votre téléphone puis appuyez sur le bouton ci-dessous. Les employés marqués « pointage à distance » (dans leur fiche) sont dispensés du QR. Les positions des employés ne sont jamais enregistrées.</p>
+  <button type="button" class="alt" id="gp">Utiliser ma position actuelle</button> <button>Enregistrer</button></form>`;
+}
 /* ---------- espace de l’employé : profil et pointage ---------- */
 async function myArea(el){
   el.innerHTML = '<p>Chargement…</p>';
@@ -646,7 +713,7 @@ async function myArea(el){
   ${(at||[]).map(a => `<tr><td>${esc(a.work_date)}</td><td>${hhmm(a.check_in)}</td><td>${hhmm(a.check_out)}</td><td><span class="tag">${AT[a.status] || a.status}</span></td></tr>`).join('') || '<tr><td colspan="4">Aucun pointage pour le moment.</td></tr>'}</table></div>`;
   el.insertAdjacentHTML('beforeend','<div id="lv"></div>'); leaveBox($('#lv'), e); el.insertAdjacentHTML('beforeend','<div id="pfb"></div>'); perfBox($('#pfb'), e);
   const go = (fn, ok) => async () => { const { error } = await sb.rpc(fn); error ? fail(error) : (toast(ok), myArea(el)); };
-  $('#ci').onclick = go('check_in', 'Arrivée enregistrée'); $('#co').onclick = go('check_out', 'Départ enregistré');
+  $('#ci').onclick = () => clockAction('check_in', e, el); $('#co').onclick = () => clockAction('check_out', e, el);
 }
 
 /* ---------- super admin ---------- */
